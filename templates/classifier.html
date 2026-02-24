@@ -118,18 +118,20 @@
     <hr class="border-gray-800 mb-6">
 
     <!-- Prediction -->
-    <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 mb-6">
+    <div id="predict-section" class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 mb-6">
         <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">未ラベル候補特許の適合判定予測</h3>
-        {% if not has_classifier %}
-        <p class="text-sm text-gray-500">先に分類器を学習してください。</p>
-        {% elif label_info and label_info.unlabeled == 0 %}
-        <p class="text-sm text-gray-500">未ラベルの特許がありません（全件にラベルがあります）。</p>
-        {% else %}
-        <button id="btn-predict"
-                class="bg-brand-600 hover:bg-brand-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm">
-            未ラベル候補特許を予測
-        </button>
-        {% endif %}
+        <div id="predict-action">
+            {% if not has_classifier %}
+            <p class="text-sm text-gray-500" id="predict-placeholder">先に分類器を学習してください。</p>
+            {% elif label_info and label_info.unlabeled == 0 %}
+            <p class="text-sm text-gray-500">未ラベルの特許がありません（全件にラベルがあります）。</p>
+            {% else %}
+            <button id="btn-predict"
+                    class="bg-brand-600 hover:bg-brand-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm">
+                未ラベル候補特許を予測
+            </button>
+            {% endif %}
+        </div>
     </div>
 
     <!-- Prediction results (AJAX) -->
@@ -172,6 +174,39 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Predict handler (extracted as function for re-binding after train)
+    function bindPredictButton() {
+        const btn = document.getElementById('btn-predict');
+        if (btn) {
+            btn.addEventListener('click', async function() {
+                const result = await ajaxPost('{{ url_for("classifier.predict") }}', {},
+                    { loadingMessage: '予測中...' });
+                if (result.error) return;
+
+                const area = document.getElementById('predict-results');
+                area.classList.remove('hidden');
+                document.getElementById('predict-summary').innerHTML =
+                    `予測完了: <span class="text-emerald-400">正解予測 ${result.positive_count}件</span> / <span class="text-red-400">ノイズ予測 ${result.negative_count}件</span>`;
+                if (result.tables && result.tables.predictions) {
+                    document.getElementById('table-predictions').innerHTML = result.tables.predictions;
+                    styleTable(document.getElementById('table-predictions'));
+                }
+            });
+        }
+    }
+
+    // Activate predict section (replace placeholder with button)
+    function activatePredictSection() {
+        const action = document.getElementById('predict-action');
+        if (!action) return;
+        action.innerHTML = `
+            <button id="btn-predict"
+                    class="bg-brand-600 hover:bg-brand-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm">
+                未ラベル候補特許を予測
+            </button>`;
+        bindPredictButton();
+    }
+
     // Train
     const btnTrain = document.getElementById('btn-train');
     if (btnTrain) {
@@ -208,6 +243,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (result.charts && result.charts.confusion_matrix) {
                 insertHTMLWithScripts(document.getElementById('chart-cm-container'), result.charts.confusion_matrix);
             }
+
+            // 学習完了後、予測セクションを有効化
+            activatePredictSection();
             showFlash('学習完了', 'success');
         });
     }
@@ -239,24 +277,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Predict
-    const btnPredict = document.getElementById('btn-predict');
-    if (btnPredict) {
-        btnPredict.addEventListener('click', async function() {
-            const result = await ajaxPost('{{ url_for("classifier.predict") }}', {},
-                { loadingMessage: '予測中...' });
-            if (result.error) return;
-
-            const area = document.getElementById('predict-results');
-            area.classList.remove('hidden');
-            document.getElementById('predict-summary').innerHTML =
-                `予測完了: <span class="text-emerald-400">正解予測 ${result.positive_count}件</span> / <span class="text-red-400">ノイズ予測 ${result.negative_count}件</span>`;
-            if (result.tables && result.tables.predictions) {
-                document.getElementById('table-predictions').innerHTML = result.tables.predictions;
-                styleTable(document.getElementById('table-predictions'));
-            }
-        });
-    }
+    // Predict (bind on initial page load if button already exists)
+    bindPredictButton();
 });
 </script>
 {% endblock %}
