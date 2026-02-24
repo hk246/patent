@@ -178,10 +178,26 @@ def compare():
         }
 
         if 'F1スコア(1)' in cmp_df.columns:
-            fig = px.bar(cmp_df, x='分類器', y='F1スコア(1)',
+            # F1スコア昇順でソート（横棒グラフは下→上に表示されるため）
+            plot_df = cmp_df.sort_values('F1スコア(1)', ascending=True)
+            fig = px.bar(plot_df, x='F1スコア(1)', y='分類器',
+                         orientation='h',
                          color='F1スコア(1)', color_continuous_scale='RdYlGn',
                          title='分類器別 F1スコア比較', text_auto='.4f')
-            fig.update_layout(xaxis_tickangle=-45, height=400)
+            n_classifiers = len(plot_df)
+            chart_height = max(400, n_classifiers * 40 + 120)
+            fig.update_layout(
+                height=chart_height,
+                yaxis=dict(
+                    tickfont=dict(size=12),
+                    automargin=True,
+                ),
+                xaxis=dict(
+                    title='F1スコア(1)',
+                    range=[0, 1.05],
+                ),
+                margin=dict(l=10),
+            )
             resp['charts']['f1_comparison'] = fig_to_html(fig, 'chart-f1')
 
         return jsonify(resp)
