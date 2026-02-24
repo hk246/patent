@@ -8,7 +8,6 @@ def register_blueprints(app):
     from routes.clearance import bp as clearance_bp
     from routes.classifier_routes import bp as classifier_bp
     from routes.visualization import bp as visualization_bp
-    from routes.glossary import bp as glossary_bp
     from routes.settings import bp as settings_bp
     from routes.report import bp as report_bp
 
@@ -17,6 +16,5 @@ def register_blueprints(app):
     app.register_blueprint(clearance_bp)
     app.register_blueprint(classifier_bp)
     app.register_blueprint(visualization_bp)
-    app.register_blueprint(glossary_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(report_bp)
