@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+{% block title %}クリアランス調査 - 特許クリアランス調査{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold text-gray-100">クリアランス調査</h2>
+    </div>
+
+    {% if not ready %}
+    <div class="bg-sky-900/20 border border-sky-700/30 rounded-lg p-6 text-center">
+        <svg class="w-12 h-12 mx-auto text-sky-400/50 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <p class="text-sky-300 mb-1">調査を開始するには以下が必要です:</p>
+        <ol class="text-sm text-gray-400 space-y-1">
+            <li>1. 自社特許を登録してベクトル化</li>
+            <li>2. 候補特許DBを登録してベクトル化</li>
+        </ol>
+    </div>
+    {% else %}
+
+    <!-- Step 1: Select patents -->
+    <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 mb-6">
+        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+            Step 1 — 調査に使用する自社特許を選択
+        </h3>
+        <div id="patent-checkboxes" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {% for pid in patent_ids %}
+            <label class="flex items-center gap-2 bg-gray-800/50 rounded-md px-3 py-2 cursor-pointer hover:bg-gray-800 transition-colors">
+                <input type="checkbox" name="selected_ids" value="{{ pid }}" checked
+                       class="w-4 h-4 rounded bg-gray-700 border-gray-600 text-brand-500 focus:ring-brand-500">
+                <span class="text-sm text-gray-300 font-mono truncate">{{ pid }}</span>
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Strategy info -->
+    <div class="bg-brand-900/20 border border-brand-700/30 rounded-lg px-4 py-3 mb-6 text-sm text-brand-300">
+        集約戦略: <strong>{{ strategy_desc }}</strong>
+        <span class="text-xs text-gray-500 ml-2">（サイドバーで変更可能）</span>
+    </div>
+
+    <!-- Step 2: Parameters + Run -->
+    <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 mb-6">
+        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+            Step 2 — 類似度計算・ランキング
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">
+                    表示件数: <span id="top-n-val" class="text-gray-300">30</span>
+                </label>
+                <input type="range" id="top-n" min="5" max="200" value="30" step="5"
+                       class="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-brand-500"
+                       oninput="document.getElementById('top-n-val').textContent=this.value">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">
+                    最低スコア閾値: <span id="threshold-val" class="text-gray-300">0.00</span>
+                </label>
+                <input type="range" id="score-threshold" min="0" max="1" value="0" step="0.01"
+                       class="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-brand-500"
+                       oninput="document.getElementById('threshold-val').textContent=parseFloat(this.value).toFixed(2)">
+            </div>
+            <div>
+                <button id="btn-run-clearance"
+                        class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    クリアランス調査を実行
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results area (populated by AJAX) -->
+    <div id="results-area" class="hidden space-y-6">
+        <!-- Summary -->
+        <div id="section-summary" class="hidden">
+            <h3 class="text-lg font-semibold text-gray-100 mb-3">自社特許別サマリー</h3>
+            <div id="table-summary" class="overflow-x-auto rounded-lg border border-gray-700/50"></div>
+        </div>
+
+        <!-- Precision/Recall -->
+        <div id="section-pr" class="hidden">
+            <h3 class="text-lg font-semibold text-gray-100 mb-3">精度・再現率（Precision / Recall）</h3>
+            <div id="table-pr" class="overflow-x-auto rounded-lg border border-gray-700/50"></div>
+        </div>
+
+        <!-- Bar chart -->
+        <div id="section-bar" class="bg-gray-900 border border-gray-700/50 rounded-lg p-4">
+            <div id="chart-bar-container"></div>
+        </div>
+
+        <!-- Heatmap -->
+        <div id="section-heatmap" class="hidden bg-gray-900 border border-gray-700/50 rounded-lg p-4">
+            <div id="chart-heatmap-container"></div>
+        </div>
+
+        <!-- Results table -->
+        <div>
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-lg font-semibold text-gray-100">検索結果</h3>
+                <a href="{{ url_for('clearance.download_results') }}"
+                   class="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 bg-gray-800 px-3 py-1.5 rounded-md transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    CSVダウンロード
+                </a>
+            </div>
+            <div id="table-results" class="overflow-x-auto rounded-lg border border-gray-700/50 max-h-96 overflow-y-auto"></div>
+        </div>
+
+        <!-- Detail cards -->
+        <div>
+            <h3 class="text-lg font-semibold text-gray-100 mb-3">上位10件 詳細</h3>
+            <div id="detail-cards" class="space-y-2"></div>
+        </div>
+
+        <hr class="border-gray-800">
+
+        <!-- Claim element analysis -->
+        <div>
+            <h3 class="text-lg font-semibold text-gray-100 mb-1">請求項の構成要素単位の類似度分析</h3>
+            <p class="text-xs text-gray-500 mb-3">自社特許の請求項を構成要素(a,b,c...)に分解し、候補特許内の根拠文を特定します。</p>
+            <div class="flex items-end gap-3">
+                <div class="flex-1">
+                    <label class="block text-xs text-gray-500 mb-1">分析する自社特許</label>
+                    <select id="claim-patent-select"
+                            class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-sm text-gray-100">
+                        {% for pid in patent_ids %}
+                        <option value="{{ pid }}">{{ pid }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button id="btn-claim-analysis"
+                        class="bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium py-2 px-4 rounded-lg transition-colors text-sm">
+                    構成要素分析を実行
+                </button>
+            </div>
+            <div id="claim-results" class="mt-4 space-y-3"></div>
+        </div>
+    </div>
+
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const btnRun = document.getElementById('btn-run-clearance');
+    if (!btnRun) return;
+
+    btnRun.addEventListener('click', async function() {
+        const checkboxes = document.querySelectorAll('input[name="selected_ids"]:checked');
+        const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+        if (selectedIds.length === 0) {
+            showFlash('1件以上の自社特許を選択してください。', 'warning');
+            return;
+        }
+
+        const result = await ajaxPost('{{ url_for("clearance.run") }}', {
+            selected_ids: selectedIds,
+            top_n: parseInt(document.getElementById('top-n').value),
+            score_threshold: parseFloat(document.getElementById('score-threshold').value),
+        }, { loadingMessage: '類似度計算中...' });
+
+        if (result.error) return;
+
+        const area = document.getElementById('results-area');
+        area.classList.remove('hidden');
+
+        // Summary
+        if (result.tables && result.tables.summary) {
+            document.getElementById('section-summary').classList.remove('hidden');
+            document.getElementById('table-summary').innerHTML = result.tables.summary;
+        }
+
+        // Precision/Recall
+        if (result.tables && result.tables.precision_recall) {
+            document.getElementById('section-pr').classList.remove('hidden');
+            document.getElementById('table-pr').innerHTML = result.tables.precision_recall;
+        }
+
+        // Bar chart
+        if (result.charts && result.charts.bar) {
+            insertHTMLWithScripts(document.getElementById('chart-bar-container'), result.charts.bar);
+        }
+
+        // Heatmap
+        if (result.charts && result.charts.heatmap) {
+            document.getElementById('section-heatmap').classList.remove('hidden');
+            insertHTMLWithScripts(document.getElementById('chart-heatmap-container'), result.charts.heatmap);
+        }
+
+        // Results table
+        if (result.tables && result.tables.results) {
+            document.getElementById('table-results').innerHTML = result.tables.results;
+        }
+
+        // Detail cards
+        if (result.detail_cards) {
+            const container = document.getElementById('detail-cards');
+            container.innerHTML = '';
+            result.detail_cards.forEach(function(card) {
+                let labelHtml = '';
+                if (card.label !== undefined) {
+                    labelHtml = card.label === 1
+                        ? '<span class="text-xs bg-emerald-900/50 text-emerald-400 px-2 py-0.5 rounded-full">正解(1)</span>'
+                        : '<span class="text-xs bg-red-900/50 text-red-400 px-2 py-0.5 rounded-full">ノイズ(0)</span>';
+                }
+                let queryHtml = card.most_similar_query
+                    ? `<span class="text-xs text-gray-500">最類似: ${card.most_similar_query}</span>` : '';
+
+                let scoresHtml = '';
+                if (card.individual_scores) {
+                    scoresHtml = '<div class="flex flex-wrap gap-2 mt-2">';
+                    for (const [k, v] of Object.entries(card.individual_scores)) {
+                        const pct = (v * 100).toFixed(0);
+                        scoresHtml += `<div class="text-xs"><span class="text-gray-500">${k}:</span> <span class="text-gray-300">${v}</span></div>`;
+                    }
+                    scoresHtml += '</div>';
+                }
+
+                container.innerHTML += `
+                <details class="bg-gray-900 border border-gray-700/50 rounded-lg group">
+                    <summary class="px-4 py-3 cursor-pointer hover:bg-gray-800/50 rounded-lg flex items-center gap-3">
+                        <span class="text-brand-400 font-mono text-sm font-bold">${card.score}</span>
+                        <span class="text-sm font-mono text-gray-400">${card.patent_id}</span>
+                        <span class="text-sm text-gray-300 truncate">${card.title}</span>
+                        ${labelHtml}
+                        <svg class="w-4 h-4 text-gray-500 ml-auto transform group-open:rotate-180 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </summary>
+                    <div class="px-4 pb-4 text-sm text-gray-400">
+                        ${queryHtml}
+                        ${scoresHtml}
+                        <div class="mt-2">
+                            <span class="text-xs text-gray-500 uppercase">請求項:</span>
+                            <p class="mt-1 text-gray-300 text-xs leading-relaxed">${card.claims || '（なし）'}</p>
+                        </div>
+                    </div>
+                </details>`;
+            });
+        }
+
+        showFlash(`調査完了: ${result.count}件を表示`, 'success');
+
+        // Style injected tables
+        area.querySelectorAll('table').forEach(function(t) {
+            t.classList.add('w-full', 'text-sm', 'text-gray-300');
+            t.querySelectorAll('thead').forEach(h => h.classList.add('bg-gray-800/80', 'text-gray-400', 'text-xs', 'uppercase'));
+            t.querySelectorAll('th').forEach(th => th.classList.add('px-3', 'py-2', 'text-left'));
+            t.querySelectorAll('td').forEach(td => td.classList.add('px-3', 'py-2'));
+            t.querySelectorAll('tbody tr').forEach(tr => tr.classList.add('border-t', 'border-gray-800', 'hover:bg-gray-800/40'));
+        });
+    });
+
+    // Claim element analysis
+    const btnClaim = document.getElementById('btn-claim-analysis');
+    if (btnClaim) {
+        btnClaim.addEventListener('click', async function() {
+            const patentId = document.getElementById('claim-patent-select').value;
+            const result = await ajaxPost('{{ url_for("clearance.claim_elements") }}', {
+                patent_id: patentId
+            }, { loadingMessage: '構成要素分析中...' });
+
+            if (result.error) return;
+
+            const container = document.getElementById('claim-results');
+            container.innerHTML = '';
+
+            if (result.tables && result.tables.elements) {
+                container.innerHTML += `<h4 class="text-sm font-semibold text-gray-300">構成要素: ${result.element_count}個</h4>`;
+                container.innerHTML += `<div class="overflow-x-auto rounded border border-gray-700/50">${result.tables.elements}</div>`;
+            }
+            if (result.tables && result.tables.analysis) {
+                container.innerHTML += `<h4 class="text-sm font-semibold text-gray-300 mt-3">類似度分析結果</h4>`;
+                container.innerHTML += `<div class="overflow-x-auto rounded border border-gray-700/50">${result.tables.analysis}</div>`;
+            }
+
+            // Style tables
+            container.querySelectorAll('table').forEach(function(t) {
+                t.classList.add('w-full', 'text-sm', 'text-gray-300');
+                t.querySelectorAll('thead').forEach(h => h.classList.add('bg-gray-800/80', 'text-gray-400', 'text-xs'));
+                t.querySelectorAll('th').forEach(th => th.classList.add('px-3', 'py-2', 'text-left'));
+                t.querySelectorAll('td').forEach(td => td.classList.add('px-3', 'py-2'));
+                t.querySelectorAll('tbody tr').forEach(tr => tr.classList.add('border-t', 'border-gray-800'));
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

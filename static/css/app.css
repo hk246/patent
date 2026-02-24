@@ -1,0 +1,118 @@
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #111827;
+}
+::-webkit-scrollbar-thumb {
+    background: #374151;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #4b5563;
+}
+
+/* Hide scrollbar for tab nav */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Range input styling */
+input[type="range"] {
+    -webkit-appearance: none;
+    background: transparent;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px;
+    background: #374151;
+    border-radius: 3px;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #6366f1;
+    margin-top: -5px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+    background: #818cf8;
+}
+
+/* Plotly chart dark mode overrides */
+.js-plotly-plot .plotly .modebar {
+    background: transparent !important;
+}
+.js-plotly-plot .plotly .modebar-btn path {
+    fill: #9ca3af !important;
+}
+.js-plotly-plot .plotly .modebar-btn:hover path {
+    fill: #d1d5db !important;
+}
+
+/* Details/summary styling */
+details > summary {
+    list-style: none;
+}
+details > summary::-webkit-details-marker {
+    display: none;
+}
+
+/* File upload drop zone */
+.upload-zone {
+    transition: border-color 0.2s, background-color 0.2s;
+}
+.upload-zone.dragover {
+    border-color: #6366f1;
+    background-color: rgba(99, 102, 241, 0.05);
+}
+
+/* Checkbox styling */
+input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    border: 1.5px solid #4b5563;
+    border-radius: 0.25rem;
+    background: #1f2937;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+}
+input[type="checkbox"]:checked {
+    background: #6366f1;
+    border-color: #6366f1;
+}
+input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 0px;
+    width: 5px;
+    height: 9px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+input[type="checkbox"]:focus {
+    outline: 2px solid #6366f1;
+    outline-offset: 1px;
+}
+
+/* Smooth page transitions */
+main {
+    animation: fadeIn 0.15s ease-in;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}

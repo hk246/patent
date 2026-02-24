@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}可視化 - 特許クリアランス調査{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold text-gray-100">可視化</h2>
+        <p class="text-xs text-gray-500 mt-1">SVD/PCAによる次元圧縮で特許文書の相互関係を2D散布図に表示します。</p>
+    </div>
+
+    {% if not ready %}
+    <div class="bg-sky-900/20 border border-sky-700/30 rounded-lg p-6 text-center text-sky-300">
+        候補特許DBを登録してベクトル化してください。
+    </div>
+    {% else %}
+
+    <!-- Scatter plot controls -->
+    <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">次元削減手法</label>
+                <select id="dim-method"
+                        class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-sm text-gray-100">
+                    <option value="SVD (LSA)">SVD (LSA)</option>
+                    <option value="PCA">PCA</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">色分け</label>
+                <select id="color-by"
+                        class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-sm text-gray-100">
+                    <option value="type">自社/候補の区別</option>
+                    <option value="label">label（正解/ノイズ）</option>
+                    <option value="score">類似度スコア</option>
+                    <option value="none">なし</option>
+                </select>
+            </div>
+            <div>
+                <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer mt-5">
+                    <input type="checkbox" id="show-labels"
+                           class="w-4 h-4 rounded bg-gray-700 border-gray-600 text-brand-500">
+                    番号を表示
+                </label>
+            </div>
+            <div>
+                <button id="btn-scatter"
+                        class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors text-sm">
+                    散布図を生成
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scatter chart -->
+    <div id="chart-scatter-container" class="bg-gray-900 border border-gray-700/50 rounded-lg p-4 mb-6 min-h-[200px]">
+        <p class="text-gray-500 text-sm text-center py-12">「散布図を生成」ボタンを押してください</p>
+    </div>
+
+    <p id="scatter-caption" class="hidden text-xs text-gray-500 mb-6">
+        自社特許(★)周囲の候補特許(●)ほどクリアランスに注意が必要です。
+    </p>
+
+    <hr class="border-gray-800 mb-6">
+
+    <!-- Histogram -->
+    {% if has_results %}
+    <div class="mb-6">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-semibold text-gray-100">類似度スコア分布</h3>
+            <button id="btn-histogram"
+                    class="bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium py-1.5 px-3 rounded-lg transition-colors text-sm">
+                ヒストグラムを生成
+            </button>
+        </div>
+        <div id="chart-histogram-container" class="bg-gray-900 border border-gray-700/50 rounded-lg p-4"></div>
+    </div>
+    <hr class="border-gray-800 mb-6">
+    {% endif %}
+
+    <!-- TF-IDF Features -->
+    {% if has_top_features and patent_ids %}
+    <div>
+        <h3 class="text-lg font-semibold text-gray-100 mb-3">自社特許の重要語（TF-IDF）</h3>
+        <div class="flex items-end gap-3 mb-4">
+            <div class="flex-1">
+                <label class="block text-xs text-gray-500 mb-1">特許を選択</label>
+                <select id="feature-patent"
+                        class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-sm text-gray-100">
+                    {% for pid in patent_ids %}
+                    <option value="{{ pid }}">{{ pid }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button id="btn-features"
+                    class="bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium py-2 px-4 rounded-lg transition-colors text-sm">
+                重要語を表示
+            </button>
+        </div>
+        <div id="chart-features-container" class="bg-gray-900 border border-gray-700/50 rounded-lg p-4"></div>
+    </div>
+    {% endif %}
+
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Scatter
+    const btnScatter = document.getElementById('btn-scatter');
+    if (btnScatter) {
+        btnScatter.addEventListener('click', async function() {
+            const result = await ajaxPost('{{ url_for("visualization.scatter") }}', {
+                dim_method: document.getElementById('dim-method').value,
+                color_by: document.getElementById('color-by').value,
+                show_labels: document.getElementById('show-labels').checked,
+            }, { loadingMessage: '次元削減中...' });
+            if (result.error) return;
+            if (result.charts && result.charts.scatter) {
+                insertHTMLWithScripts(document.getElementById('chart-scatter-container'), result.charts.scatter);
+                const cap = document.getElementById('scatter-caption');
+                if (cap) cap.classList.remove('hidden');
+            }
+        });
+    }
+
+    // Histogram
+    const btnHist = document.getElementById('btn-histogram');
+    if (btnHist) {
+        btnHist.addEventListener('click', async function() {
+            const result = await ajaxPost('{{ url_for("visualization.histogram") }}', {},
+                { loadingMessage: 'ヒストグラム生成中...' });
+            if (result.error) return;
+            if (result.charts && result.charts.histogram) {
+                insertHTMLWithScripts(document.getElementById('chart-histogram-container'), result.charts.histogram);
+            }
+        });
+    }
+
+    // Features
+    const btnFeatures = document.getElementById('btn-features');
+    if (btnFeatures) {
+        btnFeatures.addEventListener('click', async function() {
+            const result = await ajaxPost('{{ url_for("visualization.features") }}', {
+                patent_id: document.getElementById('feature-patent').value,
+            }, { loadingMessage: '重要語分析中...' });
+            if (result.error) return;
+            if (result.charts && result.charts.features) {
+                insertHTMLWithScripts(document.getElementById('chart-features-container'), result.charts.features);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

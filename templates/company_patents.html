@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}自社特許登録 - 特許クリアランス調査{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold text-gray-100">自社特許の登録</h2>
+        <p class="text-sm text-gray-400 mt-1">
+            クリアランス調査の基準となる自社特許をCSVファイルで登録します。
+            複数件登録することで、ポートフォリオ全体として調査できます。
+        </p>
+    </div>
+
+    <!-- CSV Format Info -->
+    <details class="bg-gray-900 border border-gray-700/50 rounded-lg mb-6 group">
+        <summary class="px-4 py-3 cursor-pointer text-gray-200 font-medium hover:bg-gray-800/50 rounded-lg flex justify-between items-center">
+            CSVフォーマット（クリックして確認）
+            <svg class="w-5 h-5 text-gray-500 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </summary>
+        <div class="px-4 pb-4">
+            <div class="overflow-x-auto rounded-lg border border-gray-700/50 mt-2">
+                <table class="w-full text-sm text-gray-300">
+                    <thead class="bg-gray-800/80 text-gray-400 text-xs uppercase">
+                        <tr>
+                            <th class="px-4 py-2 text-left">列名</th>
+                            <th class="px-4 py-2 text-left">区分</th>
+                            <th class="px-4 py-2 text-left">説明</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-800">
+                        <tr><td class="px-4 py-2"><code class="text-brand-400">patent_id</code></td><td class="px-4 py-2 text-emerald-400">必須</td><td class="px-4 py-2">特許番号（例: JP2020-001001）</td></tr>
+                        <tr><td class="px-4 py-2"><code class="text-brand-400">title</code></td><td class="px-4 py-2 text-emerald-400">必須</td><td class="px-4 py-2">発明の名称</td></tr>
+                        <tr><td class="px-4 py-2"><code class="text-brand-400">abstract</code></td><td class="px-4 py-2 text-gray-500">-</td><td class="px-4 py-2">要約</td></tr>
+                        <tr><td class="px-4 py-2"><code class="text-brand-400">claims</code></td><td class="px-4 py-2 text-gray-500">-</td><td class="px-4 py-2">請求項</td></tr>
+                        <tr><td class="px-4 py-2"><code class="text-brand-400">description</code></td><td class="px-4 py-2 text-gray-500">-</td><td class="px-4 py-2">実施例・詳細説明</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </details>
+
+    <!-- Two columns: Sample + Upload -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Sample data -->
+        <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5">
+            <h3 class="text-lg font-semibold text-gray-100 mb-1">サンプルデータを使用</h3>
+            <p class="text-xs text-gray-500 mb-4">ガスバリアフィルム関連特許 5件（デモ用）</p>
+
+            {% if sample_exists %}
+            <form action="{{ url_for('company_patents.load_sample') }}" method="POST">
+                <button type="submit"
+                        class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm">
+                    サンプル自社特許を読み込む
+                </button>
+            </form>
+
+            {% if sample_preview %}
+            <details class="mt-3 group">
+                <summary class="text-xs text-gray-500 cursor-pointer hover:text-gray-300">プレビュー</summary>
+                <div class="mt-2 overflow-x-auto rounded border border-gray-700/50">
+                    <table class="w-full text-xs text-gray-400">
+                        <thead class="bg-gray-800/80"><tr><th class="px-3 py-1.5 text-left">番号</th><th class="px-3 py-1.5 text-left">タイトル</th></tr></thead>
+                        <tbody class="divide-y divide-gray-800">
+                            {% for row in sample_preview %}
+                            <tr><td class="px-3 py-1.5">{{ row.patent_id }}</td><td class="px-3 py-1.5">{{ row.title[:60] }}</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+            {% endif %}
+            {% else %}
+            <p class="text-amber-400 text-sm">data/sample_company_patents.csv が見つかりません</p>
+            {% endif %}
+
+            <div class="mt-4">
+                <a href="{{ url_for('company_patents.download_template') }}"
+                   class="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    CSVテンプレートをダウンロード
+                </a>
+            </div>
+        </div>
+
+        <!-- Upload -->
+        <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5">
+            <h3 class="text-lg font-semibold text-gray-100 mb-1">CSVファイルをアップロード</h3>
+            <p class="text-xs text-gray-500 mb-4">UTF-8 / CP932 を自動判定します</p>
+
+            <form action="{{ url_for('company_patents.upload') }}" method="POST" enctype="multipart/form-data">
+                <div class="upload-zone border-2 border-dashed border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-brand-500/50 transition-colors">
+                    <svg class="w-8 h-8 mx-auto text-gray-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    <p class="text-sm text-gray-400 mb-2">CSVファイルをドラッグ&ドロップ</p>
+                    <input type="file" name="csv_file" accept=".csv"
+                           class="block w-full text-sm text-gray-400 file:mr-3 file:py-1.5 file:px-3
+                                  file:rounded-md file:border-0 file:text-sm file:font-medium
+                                  file:bg-gray-700 file:text-gray-300 hover:file:bg-gray-600
+                                  cursor-pointer">
+                </div>
+                <button type="submit"
+                        class="mt-3 w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm">
+                    このデータを登録する
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Registered patents -->
+    <hr class="border-gray-800 mb-6">
+
+    {% if cp is not none and not cp.empty %}
+    <div class="mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-100">
+                登録済み自社特許:
+                <span class="text-brand-400">{{ cp|length }}件</span>
+            </h3>
+            <a href="{{ url_for('company_patents.download') }}"
+               class="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 bg-gray-800 px-3 py-1.5 rounded-md transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                CSVダウンロード
+            </a>
+        </div>
+
+        <div class="space-y-2">
+            {% for row in cp_list %}
+            <div class="bg-gray-900 border border-gray-700/50 rounded-lg px-4 py-3 flex items-center justify-between group hover:border-gray-600 transition-colors">
+                <div class="flex items-center gap-4 min-w-0">
+                    <span class="text-sm font-mono text-brand-400 whitespace-nowrap">{{ row.patent_id }}</span>
+                    <span class="text-sm text-gray-300 truncate">{{ row.title[:80] }}</span>
+                </div>
+                <form action="{{ url_for('company_patents.delete', idx=loop.index0) }}" method="POST" class="flex-shrink-0 ml-2">
+                    <button type="submit"
+                            class="text-xs text-gray-500 hover:text-red-400 px-2 py-1 rounded transition-colors opacity-0 group-hover:opacity-100">
+                        削除
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Vectorization status -->
+        <div class="mt-4">
+            {% if company_vectors is not none %}
+            <div class="flex items-center gap-2 text-sm text-emerald-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                ベクトル化済み（{{ company_vectors.shape[0] }}件 × {{ company_vectors.shape[1] }}次元）
+            </div>
+            {% else %}
+            <div class="flex items-center gap-2 text-sm text-amber-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                </svg>
+                まだベクトル化されていません。サイドバーの「ベクトル化を実行」ボタンを押してください。
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-sky-900/20 border border-sky-700/30 rounded-lg p-4 text-sm text-sky-300">
+        自社特許はまだ登録されていません。上のフォームからCSVをアップロードするか、サンプルデータを読み込んでください。
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

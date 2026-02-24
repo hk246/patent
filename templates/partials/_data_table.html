@@ -1,0 +1,22 @@
+{# 使い方: {% include 'partials/_data_table.html' %} #}
+{# 変数: table_headers (list), table_rows (list of lists), table_id (optional) #}
+<div class="overflow-x-auto rounded-lg border border-gray-700/50">
+    <table class="w-full text-sm text-gray-300" {% if table_id %}id="{{ table_id }}"{% endif %}>
+        <thead class="bg-gray-800/80 text-gray-400 text-xs uppercase tracking-wider">
+            <tr>
+                {% for header in table_headers %}
+                <th class="px-4 py-3 text-left font-semibold">{{ header }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-800">
+            {% for row in table_rows %}
+            <tr class="hover:bg-gray-800/40 transition-colors">
+                {% for cell in row %}
+                <td class="px-4 py-2.5">{{ cell }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

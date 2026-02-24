@@ -1,0 +1,6 @@
+{# 使い方: {% include 'partials/_metric_card.html' with context %} #}
+{# 変数: metric_label, metric_value, metric_color (optional, default: brand) #}
+<div class="bg-gray-900 border border-gray-700/50 rounded-lg p-4 text-center">
+    <div class="text-gray-400 text-xs uppercase tracking-wider mb-1">{{ metric_label }}</div>
+    <div class="text-2xl font-bold {{ metric_color|default('text-brand-400') }}">{{ metric_value }}</div>
+</div>

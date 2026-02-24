@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>特許クリアランス調査レポート</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Times New Roman', 'Noto Serif JP', 'Yu Mincho', serif;
+            font-size: 10.5pt;
+            line-height: 1.8;
+            color: #111;
+            background: #f5f5f5;
+        }
+        .toolbar {
+            position: sticky; top: 0; z-index: 10;
+            background: #1a1a2e; color: #ccc; padding: 10px 24px;
+            display: flex; align-items: center; justify-content: space-between;
+            font-family: sans-serif; font-size: 13px;
+        }
+        .toolbar button {
+            background: #4a4aff; color: #fff; border: none; padding: 6px 16px;
+            border-radius: 6px; cursor: pointer; font-size: 13px;
+        }
+        .toolbar button:hover { background: #6060ff; }
+        article {
+            max-width: 780px; margin: 30px auto; background: #fff;
+            padding: 60px 64px; box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        h1 { font-size: 16pt; font-weight: bold; text-align: center; margin-bottom: 0.5em; }
+        .authors { text-align: center; font-size: 11pt; margin-bottom: 2em; color: #333; }
+        .abstract { background: #f8f9fa; border-left: 3px solid #666; padding: 1em 1.5em; margin: 1.5em 0; font-size: 9.5pt; }
+        .abstract-title { font-weight: bold; margin-bottom: 0.5em; }
+        h2 { font-size: 13pt; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 0.3em; margin-top: 2em; margin-bottom: 0.8em; }
+        h3 { font-size: 11pt; font-weight: bold; margin-top: 1.5em; margin-bottom: 0.5em; color: #222; }
+        h4 { font-size: 10.5pt; font-weight: bold; margin-top: 1em; margin-bottom: 0.3em; color: #333; }
+        p { text-indent: 1em; margin-bottom: 0.8em; text-align: justify; }
+        p.no-indent { text-indent: 0; }
+        ul, ol { margin: 0.5em 0 0.8em 2em; }
+        li { margin-bottom: 0.3em; }
+        table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 9.5pt; }
+        table th { background: #f0f0f0; border: 1px solid #ccc; padding: 6px 10px; text-align: left; font-weight: bold; }
+        table td { border: 1px solid #ccc; padding: 6px 10px; }
+        caption { font-size: 9pt; margin-bottom: 0.5em; color: #555; caption-side: top; text-align: left; }
+        .formula { text-align: center; margin: 1em 0; font-family: 'Cambria Math', serif; font-style: italic; }
+        .todo-box {
+            background: #fff3cd; border: 1px dashed #ffc107; padding: 1em;
+            margin: 1em 0; border-radius: 4px; font-size: 9.5pt; color: #856404;
+        }
+        .todo-box::before { content: '[ TODO ] '; font-weight: bold; }
+        .ref-list { font-size: 9pt; }
+        .ref-list li { margin-bottom: 0.5em; text-indent: -2em; padding-left: 2em; }
+        figure { text-align: center; margin: 1.5em 0; }
+        figcaption { font-size: 9pt; color: #555; margin-top: 0.5em; }
+        sup { font-size: 7.5pt; }
+        @media print {
+            .toolbar { display: none !important; }
+            body { background: white; }
+            article { box-shadow: none; margin: 0; padding: 40px 50px; max-width: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <span>特許クリアランス調査レポート</span>
+    <button onclick="window.print()">印刷 / PDF出力</button>
+</div>
+
+<article>
+
+    <h1>テキストマイニングと機械学習を用いた<br>特許クリアランス調査の自動化に関する適合性評価</h1>
+
+    <div class="authors">
+        <div class="todo-box">著者名・所属を記入</div>
+    </div>
+
+    <!-- Abstract -->
+    <div class="abstract">
+        <div class="abstract-title">概要</div>
+        <p class="no-indent">
+            本稿では、自然言語処理（NLP）と機械学習を組み合わせた特許クリアランス調査の自動化手法について、
+            自部門の実務データへの適合性を評価した結果を報告する。
+            TF-IDFやDoc2Vec等の既存のテキストベクトル化手法、コサイン類似度に基づく類似特許検索、
+            及びランダムフォレスト等のアンサンブル機械学習分類器といった確立された技術を組み合わせ、
+            自部門で取り扱う特許文書に対してどの程度の精度で類似特許の検出と関連度判定が可能かを検証した。
+            本評価を通じて、既存手法の実務適用における有効性と限界を明らかにし、
+            自部門におけるクリアランス調査業務の効率化の見通しを示す。
+        </p>
+        <p class="no-indent" style="margin-top:0.5em">
+            <strong>キーワード：</strong>特許クリアランス調査、テキストマイニング、TF-IDF、コサイン類似度、機械学習分類器、適合性評価
+        </p>
+    </div>
+
+    <!-- 1. Introduction -->
+    <h2>1. はじめに</h2>
+
+    <h3>1.1 背景</h3>
+    <p>
+        製品開発や技術研究において、他者の特許権を侵害するリスクを事前に評価する「クリアランス調査」は、
+        知的財産戦略の根幹をなす作業である。
+        従来のクリアランス調査では、特許検索データベース（J-PlatPat等）を用いて専門家が手動で類似特許を
+        検索・評価するが、この作業は高度な専門知識と多大な時間を要する。
+    </p>
+    <p>
+        近年、自然言語処理（NLP）技術と機械学習の分野では、TF-IDF<sup>[1]</sup>、Word2Vec<sup>[2]</sup>、
+        Doc2Vec<sup>[3]</sup>等のテキストベクトル化手法や、ランダムフォレスト<sup>[5]</sup>、
+        SVM<sup>[7]</sup>等の分類アルゴリズムが広く研究され、多くの応用分野で有効性が実証されている。
+        しかし、これらの手法が自部門で扱う日本語特許文書に対してどの程度有効に機能するかは、
+        実際にデータを用いて検証しなければ判断できない。
+    </p>
+
+    <h3>1.2 目的</h3>
+    <p>
+        本稿の目的は、既に確立されたテキストマイニング・機械学習手法を自部門の特許クリアランス調査に適用し、
+        以下の点を明らかにすることである。
+    </p>
+    <ol>
+        <li>各ベクトル化手法（TF-IDF, Doc2Vec, Word2Vec）が自部門の特許文書でどの程度の検索精度を示すか</li>
+        <li>コサイン類似度に基づく類似特許ランキングが実務上の判断基準として十分な精度を持つか</li>
+        <li>機械学習分類器による関連特許の自動判別がどの程度信頼できるか</li>
+    </ol>
+    <p>
+        なお、本稿で使用する個々の手法に新規性はなく、いずれも先行研究で提案・評価済みの技術である。
+        本稿の貢献は、これらの手法を自部門の実務データに適用した際の精度・実用性に関する知見の提供にある。
+    </p>
+
+    <h3>1.3 本稿の構成</h3>
+    <p>
+        第2章で関連技術を概説し、第3章で評価に使用した手法の詳細を述べる。
+        第4章でシステムの実装について説明し、第5章で評価実験の結果を報告する。
+        第6章で考察を行い、第7章で結論を述べる。
+    </p>
+
+    <!-- 2. Related Work -->
+    <h2>2. 関連技術</h2>
+
+    <h3>2.1 テキストベクトル化手法</h3>
+    <p>
+        文書のベクトル化は情報検索分野における中心的な技術である。
+        Salton &amp; McGill (1983) によるTF-IDFは、単語の出現頻度と逆文書頻度の積により単語の重要度を定量化する
+        手法であり、多くの応用で有効性が示されている<sup>[1]</sup>。
+    </p>
+    <p>
+        分散表現に基づく手法として、Mikolov et al. (2013) のWord2Vecは、
+        単語をCBOWまたはSkip-gramモデルで低次元の密ベクトルに写像する<sup>[2]</sup>。
+        Le &amp; Mikolov (2014) は、Word2Vecを文書レベルに拡張したDoc2Vec（Paragraph Vector）を提案し、
+        PV-DM（Distributed Memory）とPV-DBOW（Distributed Bag of Words）の2つのアーキテクチャを
+        示した<sup>[3]</sup>。
+    </p>
+
+    <h3>2.2 特許文書の類似度計算</h3>
+    <p>
+        特許文書の類似度計算に関しては、Helmers et al. (2019) が特許文書の構造的特徴（タイトル、要約、請求項、明細書）を
+        活用した重み付きベクトル化手法の有効性を報告している<sup>[4]</sup>。
+        コサイン類似度は高次元ベクトル空間における標準的な類似度尺度であり、
+        ベクトルの方向のみに依存し文書長の差異に対して頑健な指標である。
+    </p>
+
+    <h3>2.3 機械学習による文書分類</h3>
+    <p>
+        テキスト分類タスクにおけるアンサンブル学習法の有効性は多くの研究で確認されている。
+        Breiman (2001) のランダムフォレスト<sup>[5]</sup>、Schapire (2003) のAdaBoost<sup>[6]</sup>は、
+        高次元なテキスト分類において優れた性能を示すことが報告されている。
+        SVMもテキスト分類における高性能手法として広く知られる<sup>[7]</sup>。
+    </p>
+
+    <!-- 3. Evaluated Methods -->
+    <h2>3. 評価対象手法</h2>
+
+    <h3>3.1 システム構成</h3>
+    <p>
+        評価に使用したシステムは、以下の4つのモジュールで構成される（図1）。
+        各モジュールの実装には既存のライブラリ・アルゴリズムをそのまま使用し、手法自体の改変は行っていない。
+    </p>
+    <ol>
+        <li><strong>前処理モジュール：</strong>Janome形態素解析器による日本語トークン化とフィルタリング</li>
+        <li><strong>ベクトル化モジュール：</strong>scikit-learn TF-IDF / Gensim Doc2Vec, Word2Vecによるテキストのベクトル変換</li>
+        <li><strong>類似度計算モジュール：</strong>コサイン類似度に基づく検索・ランキング</li>
+        <li><strong>分類モジュール：</strong>scikit-learn分類器による関連度の自動判別</li>
+    </ol>
+
+    <figure>
+        <div style="background: #f5f5f5; border: 1px solid #ddd; padding: 1.5em; font-family: monospace; font-size: 8.5pt; text-align: left; white-space: pre; line-height: 1.5; overflow-x: auto;">
+特許文書（タイトル, 要約, 請求項, 明細書）
+         │
+         ▼
+┌──────────────────────────────┐
+│  1. 前処理（形態素解析）       │  Janome → 名詞抽出 → ストップワード除去
+│     セクション重み付け          │  請求項(×5) &gt; タイトル(×3) &gt; 要約(×2) &gt; 明細書(×1)
+└──────────┬───────────────────┘
+         ▼
+┌──────────────────────────────┐
+│  2. ベクトル化                 │  TF-IDF / Doc2Vec / Word2Vec
+│     （次元削減: LSA/PCA）      │
+└──────────┬───────────────────┘
+         ▼
+┌──────────────────────────────┐
+│  3. 類似度計算・ランキング     │  コサイン類似度
+│     多重クエリ集約             │  最大 / 平均 / 結合ベクトル
+│     構成要素マッピング         │  請求項要素→候補文のマッチング
+└──────────┬───────────────────┘
+         ▼
+┌──────────────────────────────┐
+│  4. 機械学習分類              │  RF / AdaBoost / SVM / MLP 等
+│     適合判定予測               │  (11種アルゴリズム比較)
+└──────────────────────────────┘</div>
+        <figcaption>図1：評価システムの全体構成</figcaption>
+    </figure>
+
+    <h3>3.2 日本語特許文書の前処理</h3>
+
+    <h4>3.2.1 形態素解析</h4>
+    <p>
+        日本語テキストは英語と異なり明示的な単語区切りが存在しないため、形態素解析器によるトークン化が必要である。
+        本システムでは、Janome形態素解析器を使用し、名詞（一般名詞）のみを抽出する。
+        非自立名詞、代名詞、数詞、接尾辞等のサブカテゴリは除外し、
+        各トークンの基本形（辞書形）で表記の正規化を行う。
+    </p>
+
+    <h4>3.2.2 ストップワード除去</h4>
+    <p>
+        ストップワードとして、一般的な日本語機能語（37語）に加え、特許文書に頻出する定型表現（26語）を定義した。
+        「発明」「特許」「請求」「実施」「形態」等、特許文書に頻出するが
+        技術内容の弁別に寄与しない語彙が含まれる。
+    </p>
+
+    <h4>3.2.3 セクション重み付け</h4>
+    <p>
+        Helmers et al.<sup>[4]</sup>の知見に基づき、特許文書のセクション毎に異なる重みを設定した（表1）。
+        各セクションから抽出されたトークンを重み倍数分だけ繰り返し結合することで、
+        TF値に対する間接的な重み付けを実現する。
+    </p>
+
+    <table>
+        <caption>表1：セクション別重み付け</caption>
+        <thead>
+            <tr><th>セクション</th><th>重み</th><th>設定根拠</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>請求項（Claims）</td><td>5</td><td>発明の法的保護範囲を規定する核心部分</td></tr>
+            <tr><td>タイトル（Title）</td><td>3</td><td>発明を簡潔に特定する識別情報</td></tr>
+            <tr><td>要約（Abstract）</td><td>2</td><td>技術的概要の要約</td></tr>
+            <tr><td>明細書（Description）</td><td>1</td><td>実施形態の詳細記述（基準重み）</td></tr>
+        </tbody>
+    </table>
+
+    <h3>3.3 テキストベクトル化</h3>
+
+    <h4>3.3.1 TF-IDF</h4>
+    <p>
+        TF-IDF（Term Frequency-Inverse Document Frequency）はSalton &amp; McGill (1983)<sup>[1]</sup>による
+        古典的な重み付け手法であり、本評価ではサブリニアTFスケーリングを適用した。
+    </p>
+    <div class="formula">
+        TF(t, d) = 1 + log(count(t, d)) &nbsp;&nbsp;（count &gt; 0のとき）
+    </div>
+    <div class="formula">
+        IDF(t) = log(N / df(t)) + 1
+    </div>
+    <div class="formula">
+        tfidf(t, d) = TF(t, d) &times; IDF(t)
+    </div>
+    <p>
+        ここで、N は全文書数、df(t) は単語 t を含む文書数である。
+        ユニグラムとバイグラムの両方を特徴量とし（ngram_range=(1,2)）、最大特徴数は10,000とした。
+    </p>
+    <p>
+        潜在意味解析（LSA）<sup>[8]</sup>による次元削減も併せて評価した。
+        LSAでは切断特異値分解により、TF-IDF行列を低次元の密行列に射影する。
+    </p>
+
+    <h4>3.3.2 Doc2Vec</h4>
+    <p>
+        Doc2Vec（Paragraph Vector）はLe &amp; Mikolov (2014)<sup>[3]</sup>による文書レベルの分散表現学習手法である。
+        PV-DBOW（dm=0、単語順序を無視）とPV-DM（dm=1、単語位置情報を活用）の2つのアーキテクチャを評価した。
+        いずれも200次元のベクトルを生成し、100エポックの学習を行った。
+    </p>
+
+    <h4>3.3.3 Word2Vec + 平均プーリング</h4>
+    <p>
+        Word2Vec (Mikolov et al., 2013)<sup>[2]</sup>で学習した100次元の単語ベクトルを、
+        文書内の全単語について平均プーリングにより集約し、文書ベクトルとした。
+    </p>
+
+    <h3>3.4 類似度計算と多重クエリ戦略</h3>
+
+    <h4>3.4.1 コサイン類似度</h4>
+    <p>
+        2つのベクトル <em>a</em>, <em>b</em> 間のコサイン類似度は以下で定義される。
+    </p>
+    <div class="formula">
+        sim(a, b) = (a &middot; b) / (||a|| &times; ||b||)
+    </div>
+    <p>
+        値域は [0, 1]（非負ベクトルの場合）であり、1に近いほど類似度が高い。
+    </p>
+
+    <h4>3.4.2 多重クエリ集約戦略</h4>
+    <p>
+        複数の自社特許を同時にクエリとして使用する場合の、
+        類似度スコアの集約方法として3つの既存戦略を比較した（表2）。
+    </p>
+
+    <table>
+        <caption>表2：多重クエリ集約戦略</caption>
+        <thead>
+            <tr><th>戦略</th><th>計算式</th><th>特徴</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>最大スコア</td>
+                <td>score = max<sub>i</sub> sim(q<sub>i</sub>, c)</td>
+                <td>いずれかの自社特許との類似が高ければ検出。リスク回避型。</td>
+            </tr>
+            <tr>
+                <td>平均スコア</td>
+                <td>score = mean<sub>i</sub> sim(q<sub>i</sub>, c)</td>
+                <td>ポートフォリオ全体との平均的な類似度。</td>
+            </tr>
+            <tr>
+                <td>結合ベクトル</td>
+                <td>q&#x0304; = mean(q<sub>i</sub>), score = sim(q&#x0304;, c)</td>
+                <td>自社特許群の重心ベクトルとの類似度。</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h4>3.4.3 請求項の構成要素分析</h4>
+    <p>
+        請求項を構成要素（エレメント）に分解し、
+        各構成要素に対して候補特許中の最も類似する文を特定する機能を利用した。
+        請求項は「請求項N」パターン及び読点・改行で分割され、
+        各構成要素ベクトルと候補特許の全文ベクトルとのコサイン類似度から根拠文を出力する。
+    </p>
+
+    <h3>3.5 機械学習分類器</h3>
+    <p>
+        ベクトル化された特許文書の特徴ベクトルに対して、教師あり学習による二値分類
+        （関連=1 / 無関連=0）を適用した。表3に示す11種のアルゴリズムはいずれもscikit-learn<sup>[10]</sup>で
+        提供される既存の実装をデフォルトに近いパラメータで使用した。
+    </p>
+
+    <table>
+        <caption>表3：比較対象の分類アルゴリズム</caption>
+        <thead>
+            <tr><th>分類器</th><th>手法概要</th><th>主要パラメータ</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>ランダムフォレスト</td><td>バギングによる決定木のアンサンブル</td><td>n_estimators=100</td></tr>
+            <tr><td>エイダブースト</td><td>適応的ブースティング</td><td>n_estimators=100</td></tr>
+            <tr><td>勾配ブースティング</td><td>勾配降下法によるブースティング</td><td>n_estimators=100</td></tr>
+            <tr><td>SVM（RBFカーネル）</td><td>ガウシアンカーネルによる非線形SVM</td><td>kernel='rbf'</td></tr>
+            <tr><td>SVM（線形カーネル）</td><td>線形カーネルによるSVM</td><td>kernel='linear'</td></tr>
+            <tr><td>ロジスティック回帰</td><td>線形確率モデル</td><td>max_iter=1000</td></tr>
+            <tr><td>ニューラルネット (MLP)</td><td>多層パーセプトロン</td><td>hidden=(300,100)</td></tr>
+            <tr><td>バギング</td><td>ブートストラップ集約</td><td>n_estimators=10</td></tr>
+            <tr><td>k近傍法</td><td>k最近傍による多数決</td><td>k=7</td></tr>
+            <tr><td>ナイーブベイズ</td><td>ガウシアンナイーブベイズ</td><td>-</td></tr>
+            <tr><td>決定木</td><td>単一決定木（CART）</td><td>デフォルト</td></tr>
+        </tbody>
+    </table>
+    <p>
+        評価指標として、Precision、Recall、F1スコア、AUC-ROCを使用した。
+        交差検証にはStratified K-Fold（k=5）を採用し、クラス比率を保持した分割を行った。
+    </p>
+
+    <!-- 4. Implementation -->
+    <h2>4. システム実装</h2>
+
+    <h3>4.1 開発環境</h3>
+    <table>
+        <thead>
+            <tr><th>項目</th><th>仕様</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>プログラミング言語</td><td>Python 3.x</td></tr>
+            <tr><td>Webフレームワーク</td><td>Flask 3.x</td></tr>
+            <tr><td>形態素解析</td><td>Janome</td></tr>
+            <tr><td>機械学習</td><td>scikit-learn</td></tr>
+            <tr><td>分散表現</td><td>Gensim（Doc2Vec, Word2Vec）</td></tr>
+            <tr><td>可視化</td><td>Plotly</td></tr>
+            <tr><td>フロントエンド</td><td>Tailwind CSS, JavaScript</td></tr>
+        </tbody>
+    </table>
+
+    <h3>4.2 ユーザインタフェース</h3>
+    <p>
+        評価の再現性と操作性を確保するため、Webブラウザベースのインタフェースを構築した。
+        6つのタブ構成とし、データ登録から類似度検索、分類器学習、結果可視化までの一連のワークフローを
+        画面上で実行できるようにした。
+    </p>
+
+    <!-- 5. Experiments -->
+    <h2>5. 評価実験</h2>
+
+    <h3>5.1 データセット</h3>
+    <div class="todo-box">
+        使用データセットの詳細を記入。
+        件数（自社特許○件、候補特許○件）、正解ラベルの付与方法、データの収集期間・収集元。
+    </div>
+
+    <h3>5.2 実験条件</h3>
+    <div class="todo-box">
+        実験パラメータ設定を記入。
+        ベクトル化手法、LSAの有無と次元数、テスト割合、交差検証の分割数、使用した集約戦略。
+    </div>
+
+    <h3>5.3 類似度検索の精度</h3>
+    <div class="todo-box">
+        クリアランス調査の結果を記入。
+        上位N件のPrecision@K, Recall@K, 類似度スコアの分布、ベクトル化手法間の比較。
+    </div>
+
+    <h3>5.4 分類器の比較結果</h3>
+    <div class="todo-box">
+        各アルゴリズムのPrecision, Recall, F1, AUC-ROCの比較表。混同行列、CV-F1の平均と標準偏差。
+    </div>
+
+    <h3>5.5 ベクトル化手法の比較</h3>
+    <div class="todo-box">
+        TF-IDF, TF-IDF+LSA, Doc2Vec, Word2Vecの検索精度・分類精度の比較。
+    </div>
+
+    <!-- 6. Discussion -->
+    <h2>6. 考察</h2>
+
+    <h3>6.1 ベクトル化手法の適合性</h3>
+    <div class="todo-box">
+        自部門の特許文書に対する各ベクトル化手法の適合度を考察。
+        TF-IDFのスパース表現 vs Doc2Vecの密表現の違い、LSAの効果。
+    </div>
+
+    <h3>6.2 多重クエリ戦略の比較</h3>
+    <div class="todo-box">
+        各戦略の実測結果に基づく比較。自部門のユースケースにはどの戦略が適しているか。
+    </div>
+
+    <h3>6.3 分類器の選定</h3>
+    <div class="todo-box">
+        自部門のデータ規模・特性に適した分類器はどれか。少数データでの安定性、過学習リスクの観点から議論。
+    </div>
+
+    <h3>6.4 構成要素分析の実用性</h3>
+    <p>
+        請求項の構成要素単位での類似度分析は、スコアだけでは得られない粒度の情報を提供する。
+        各構成要素が候補特許のどの記述と対応するかを具体的に示すことで、
+        専門家の判断を支援する根拠情報として機能する。
+    </p>
+    <div class="todo-box">
+        構成要素分析の具体的な結果例とその実用性について記述。
+    </div>
+
+    <h3>6.5 適用上の留意点</h3>
+    <p>
+        本評価を通じて確認された、自部門データへの適用上の留意点を以下に整理する。
+    </p>
+    <ol>
+        <li>テキストベースの手法では、表現が大きく異なる技術的等価物の検出に限界がある</li>
+        <li>特許図面からの情報は考慮されていない</li>
+        <li>分類器の性能は学習データのラベル品質に依存する</li>
+        <li>Doc2Vec等の分散表現は学習コーパスの規模に品質が左右される</li>
+        <li>本評価は自部門の特定の技術領域のデータに基づいており、他領域への一般化には別途検証が必要である</li>
+    </ol>
+
+    <!-- 7. Conclusion -->
+    <h2>7. 結論</h2>
+    <p>
+        本稿では、既存のテキストマイニング・機械学習手法を自部門の特許クリアランス調査に適用し、
+        その適合性を評価した。
+    </p>
+    <div class="todo-box">
+        評価結果の要約を記入。
+        どの手法がどの程度の精度を示したか、実務に適用可能と判断できるか。
+    </div>
+    <p>
+        今後は、評価対象の技術領域を拡大し、より多様な特許文書での検証を進めるとともに、
+        BERTやGPT等のTransformerベースのモデルとの精度比較も検討する。
+    </p>
+
+    <!-- References -->
+    <h2>参考文献</h2>
+    <ol class="ref-list">
+        <li>Salton, G., &amp; McGill, M. J. (1983). <em>Introduction to Modern Information Retrieval</em>. McGraw-Hill.</li>
+        <li>Mikolov, T., Chen, K., Corrado, G., &amp; Dean, J. (2013). "Efficient Estimation of Word Representations in Vector Space." <em>Proceedings of ICLR 2013</em>. arXiv:1301.3781.</li>
+        <li>Le, Q., &amp; Mikolov, T. (2014). "Distributed Representations of Sentences and Documents." <em>Proceedings of ICML 2014</em>, pp.1188-1196.</li>
+        <li>Helmers, L., Horn, F., Biegler, F., Muller, T., Schopf, J., &amp; Binder, A. (2019). "Automating the Search for a Patent's Prior Art with a Full Text Similarity Search." <em>PloS ONE</em>, 14(3), e0212103.</li>
+        <li>Breiman, L. (2001). "Random Forests." <em>Machine Learning</em>, 45(1), pp.5-32.</li>
+        <li>Schapire, R. E. (2003). "The Boosting Approach to Machine Learning: An Overview." <em>Nonlinear Estimation and Classification</em>. Springer.</li>
+        <li>Joachims, T. (1998). "Text Categorization with Support Vector Machines: Learning with Many Relevant Features." <em>Proceedings of ECML 1998</em>, pp.137-142.</li>
+        <li>Deerwester, S., Dumais, S. T., Furnas, G. W., Landauer, T. K., &amp; Harshman, R. (1990). "Indexing by Latent Semantic Analysis." <em>Journal of the American Society for Information Science</em>, 41(6), pp.391-407.</li>
+        <li>Bird, S., Klein, E., &amp; Loper, E. (2009). <em>Natural Language Processing with Python</em>. O'Reilly Media.</li>
+        <li>Pedregosa, F., et al. (2011). "Scikit-learn: Machine Learning in Python." <em>Journal of Machine Learning Research</em>, 12, pp.2825-2830.</li>
+    </ol>
+
+</article>
+
+</body>
+</html>

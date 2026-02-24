@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}分類器学習 - 特許クリアランス調査{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold text-gray-100">分類器学習（適合判定）</h2>
+        <p class="text-xs text-gray-500 mt-1">
+            ラベル付きデータ（正解=1, ノイズ=0）で機械学習モデルを学習し、未ラベル候補特許の関連度を予測します。
+        </p>
+    </div>
+
+    {% if not ready %}
+    <div class="bg-sky-900/20 border border-sky-700/30 rounded-lg p-6 text-center text-sky-300">
+        候補特許DBを登録してベクトル化してください。
+    </div>
+    {% elif not has_labels %}
+    <div class="bg-amber-900/20 border border-amber-700/30 rounded-lg p-4 text-amber-300 text-sm">
+        候補特許DBに 'label' 列が必要です（1=正解, 0=ノイズ）。
+    </div>
+    {% else %}
+
+    <!-- Label stats -->
+    {% if label_info %}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-3 text-center">
+            <div class="text-gray-400 text-xs uppercase tracking-wider mb-0.5">ラベルあり</div>
+            <div class="text-xl font-bold text-gray-100">{{ label_info.labeled }}件</div>
+        </div>
+        <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-3 text-center">
+            <div class="text-gray-400 text-xs uppercase tracking-wider mb-0.5">正解(1)</div>
+            <div class="text-xl font-bold text-emerald-400">{{ label_info.positive }}</div>
+        </div>
+        <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-3 text-center">
+            <div class="text-gray-400 text-xs uppercase tracking-wider mb-0.5">ノイズ(0)</div>
+            <div class="text-xl font-bold text-red-400">{{ label_info.negative }}</div>
+        </div>
+        <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-3 text-center">
+            <div class="text-gray-400 text-xs uppercase tracking-wider mb-0.5">未ラベル</div>
+            <div class="text-xl font-bold text-gray-400">{{ label_info.unlabeled }}</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Train section -->
+    <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 mb-6">
+        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">分類器の学習</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">分類アルゴリズム</label>
+                <select id="train-algorithm"
+                        class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-sm text-gray-100">
+                    {% for algo in algorithms %}
+                    <option value="{{ algo }}" {{ 'selected' if algo == 'ランダムフォレスト' }}>{{ algo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">
+                    テスト割合: <span id="test-ratio-val" class="text-gray-300">0.20</span>
+                </label>
+                <input type="range" id="test-ratio" min="0.1" max="0.5" value="0.2" step="0.05"
+                       class="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-brand-500"
+                       oninput="document.getElementById('test-ratio-val').textContent=parseFloat(this.value).toFixed(2)">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">
+                    CV分割数: <span id="cv-folds-val" class="text-gray-300">5</span>
+                </label>
+                <input type="range" id="cv-folds" min="2" max="10" value="5" step="1"
+                       class="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-brand-500"
+                       oninput="document.getElementById('cv-folds-val').textContent=this.value">
+            </div>
+            <div>
+                <button id="btn-train"
+                        class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors text-sm">
+                    分類器を学習する
+                </button>
+            </div>
+        </div>
+        <p id="algo-desc" class="text-xs text-gray-500 mt-2"></p>
+    </div>
+
+    <!-- Train results (AJAX) -->
+    <div id="train-results" class="hidden space-y-4 mb-8">
+        <div id="train-metrics" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+        <div id="chart-cm-container" class="bg-gray-900 border border-gray-700/50 rounded-lg p-4"></div>
+    </div>
+
+    <hr class="border-gray-800 mb-6">
+
+    <!-- Algorithm comparison -->
+    <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 mb-6">
+        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">アルゴリズム比較</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
+            {% set default_algos = ['エイダブースト', 'ランダムフォレスト', 'SVM (RBFカーネル)', 'ロジスティック回帰', 'ニューラルネット (MLP)'] %}
+            {% for algo in algorithms %}
+            <label class="flex items-center gap-2 bg-gray-800/50 rounded-md px-3 py-2 cursor-pointer hover:bg-gray-800 transition-colors">
+                <input type="checkbox" name="compare_algos" value="{{ algo }}"
+                       {{ 'checked' if algo in default_algos }}
+                       class="w-3.5 h-3.5 rounded bg-gray-700 border-gray-600 text-brand-500">
+                <span class="text-xs text-gray-300">{{ algo }}</span>
+            </label>
+            {% endfor %}
+        </div>
+        <button id="btn-compare"
+                class="bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium py-2 px-4 rounded-lg transition-colors text-sm">
+            アルゴリズム比較を実行
+        </button>
+    </div>
+
+    <!-- Comparison results (AJAX) -->
+    <div id="compare-results" class="hidden space-y-4 mb-8">
+        <div id="table-comparison" class="overflow-x-auto rounded-lg border border-gray-700/50"></div>
+        <div id="chart-f1-container" class="bg-gray-900 border border-gray-700/50 rounded-lg p-4"></div>
+    </div>
+
+    <hr class="border-gray-800 mb-6">
+
+    <!-- Prediction -->
+    <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 mb-6">
+        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">未ラベル候補特許の適合判定予測</h3>
+        {% if not has_classifier %}
+        <p class="text-sm text-gray-500">先に分類器を学習してください。</p>
+        {% elif label_info and label_info.unlabeled == 0 %}
+        <p class="text-sm text-gray-500">未ラベルの特許がありません（全件にラベルがあります）。</p>
+        {% else %}
+        <button id="btn-predict"
+                class="bg-brand-600 hover:bg-brand-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm">
+            未ラベル候補特許を予測
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Prediction results (AJAX) -->
+    <div id="predict-results" class="hidden space-y-4">
+        <div id="predict-summary" class="text-sm text-gray-300"></div>
+        <div id="table-predictions" class="overflow-x-auto rounded-lg border border-gray-700/50 max-h-96 overflow-y-auto"></div>
+        <a href="{{ url_for('classifier.download_predictions') }}"
+           class="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 bg-gray-800 px-3 py-1.5 rounded-md transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            予測結果CSVダウンロード
+        </a>
+    </div>
+
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const algoDescs = {{ algo_descriptions | tojson }};
+    const algoSelect = document.getElementById('train-algorithm');
+    const algoDesc = document.getElementById('algo-desc');
+
+    if (algoSelect && algoDesc) {
+        function updateDesc() { algoDesc.textContent = algoDescs[algoSelect.value] || ''; }
+        algoSelect.addEventListener('change', updateDesc);
+        updateDesc();
+    }
+
+    function styleTable(container) {
+        container.querySelectorAll('table').forEach(function(t) {
+            t.classList.add('w-full', 'text-sm', 'text-gray-300');
+            t.querySelectorAll('thead').forEach(h => h.classList.add('bg-gray-800/80', 'text-gray-400', 'text-xs', 'uppercase'));
+            t.querySelectorAll('th').forEach(th => th.classList.add('px-3', 'py-2', 'text-left'));
+            t.querySelectorAll('td').forEach(td => td.classList.add('px-3', 'py-2'));
+            t.querySelectorAll('tbody tr').forEach(tr => tr.classList.add('border-t', 'border-gray-800', 'hover:bg-gray-800/40'));
+        });
+    }
+
+    // Train
+    const btnTrain = document.getElementById('btn-train');
+    if (btnTrain) {
+        btnTrain.addEventListener('click', async function() {
+            const result = await ajaxPost('{{ url_for("classifier.train") }}', {
+                algorithm: document.getElementById('train-algorithm').value,
+                test_ratio: parseFloat(document.getElementById('test-ratio').value),
+                cv_folds: parseInt(document.getElementById('cv-folds').value),
+            }, { loadingMessage: '学習中...' });
+            if (result.error) return;
+
+            const area = document.getElementById('train-results');
+            area.classList.remove('hidden');
+
+            const m = result.metrics;
+            document.getElementById('train-metrics').innerHTML = `
+                <div class="bg-gray-800/50 rounded-lg p-3 text-center">
+                    <div class="text-gray-400 text-xs uppercase mb-0.5">正解率</div>
+                    <div class="text-xl font-bold text-brand-400">${m.accuracy}</div>
+                </div>
+                <div class="bg-gray-800/50 rounded-lg p-3 text-center">
+                    <div class="text-gray-400 text-xs uppercase mb-0.5">精度(1)</div>
+                    <div class="text-xl font-bold text-emerald-400">${m.precision}</div>
+                </div>
+                <div class="bg-gray-800/50 rounded-lg p-3 text-center">
+                    <div class="text-gray-400 text-xs uppercase mb-0.5">再現率(1)</div>
+                    <div class="text-xl font-bold text-amber-400">${m.recall}</div>
+                </div>
+                <div class="bg-gray-800/50 rounded-lg p-3 text-center">
+                    <div class="text-gray-400 text-xs uppercase mb-0.5">CV-F1</div>
+                    <div class="text-xl font-bold text-sky-400">${m.cv_f1}</div>
+                </div>`;
+
+            if (result.charts && result.charts.confusion_matrix) {
+                insertHTMLWithScripts(document.getElementById('chart-cm-container'), result.charts.confusion_matrix);
+            }
+            showFlash('学習完了', 'success');
+        });
+    }
+
+    // Compare
+    const btnCompare = document.getElementById('btn-compare');
+    if (btnCompare) {
+        btnCompare.addEventListener('click', async function() {
+            const algos = Array.from(document.querySelectorAll('input[name="compare_algos"]:checked'))
+                               .map(cb => cb.value);
+            if (algos.length < 2) { showFlash('2件以上選択してください。', 'warning'); return; }
+
+            const result = await ajaxPost('{{ url_for("classifier.compare") }}', {
+                algorithms: algos,
+                test_ratio: parseFloat(document.getElementById('test-ratio').value),
+                cv_folds: parseInt(document.getElementById('cv-folds').value),
+            }, { loadingMessage: '比較中...' });
+            if (result.error) return;
+
+            const area = document.getElementById('compare-results');
+            area.classList.remove('hidden');
+            if (result.tables && result.tables.comparison) {
+                document.getElementById('table-comparison').innerHTML = result.tables.comparison;
+                styleTable(document.getElementById('table-comparison'));
+            }
+            if (result.charts && result.charts.f1_comparison) {
+                insertHTMLWithScripts(document.getElementById('chart-f1-container'), result.charts.f1_comparison);
+            }
+        });
+    }
+
+    // Predict
+    const btnPredict = document.getElementById('btn-predict');
+    if (btnPredict) {
+        btnPredict.addEventListener('click', async function() {
+            const result = await ajaxPost('{{ url_for("classifier.predict") }}', {},
+                { loadingMessage: '予測中...' });
+            if (result.error) return;
+
+            const area = document.getElementById('predict-results');
+            area.classList.remove('hidden');
+            document.getElementById('predict-summary').innerHTML =
+                `予測完了: <span class="text-emerald-400">正解予測 ${result.positive_count}件</span> / <span class="text-red-400">ノイズ予測 ${result.negative_count}件</span>`;
+            if (result.tables && result.tables.predictions) {
+                document.getElementById('table-predictions').innerHTML = result.tables.predictions;
+                styleTable(document.getElementById('table-predictions'));
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

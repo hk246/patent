@@ -1,0 +1,16 @@
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="space-y-2 mb-4">
+    {% for category, message in messages %}
+    <div class="flash-msg px-4 py-3 rounded-lg border flex items-center justify-between text-sm
+        {% if category == 'success' %}bg-emerald-900/30 border-emerald-700/50 text-emerald-300
+        {% elif category == 'error' %}bg-red-900/30 border-red-700/50 text-red-300
+        {% elif category == 'warning' %}bg-amber-900/30 border-amber-700/50 text-amber-300
+        {% else %}bg-sky-900/30 border-sky-700/50 text-sky-300{% endif %}">
+        <span>{{ message }}</span>
+        <button onclick="this.parentElement.remove()" class="ml-4 text-gray-500 hover:text-gray-300">&times;</button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}

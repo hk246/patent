@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}特許クリアランス調査システム{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe',
+                            300: '#a5b4fc', 400: '#818cf8', 500: '#6366f1',
+                            600: '#4f46e5', 700: '#4338ca', 800: '#3730a3',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://cdn.plot.ly/plotly-2.35.0.min.js" charset="utf-8"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+
+    <!-- Mobile sidebar toggle -->
+    <button id="sidebar-toggle"
+            class="lg:hidden fixed top-3 left-3 z-50 p-2 rounded-lg bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+    </button>
+
+    <!-- Sidebar overlay (mobile) -->
+    <div id="sidebar-overlay" class="hidden fixed inset-0 bg-black/50 z-30 lg:hidden"></div>
+
+    <!-- Sidebar -->
+    {% include 'partials/_sidebar.html' %}
+
+    <!-- Main content -->
+    <div class="lg:ml-72 min-h-screen flex flex-col">
+        <!-- Tab navigation -->
+        {% include 'partials/_nav_tabs.html' %}
+
+        <!-- Page content -->
+        <main class="flex-1 p-4 lg:p-6">
+            {% include 'partials/_flash_messages.html' %}
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Footer -->
+        <footer class="p-4 text-center text-xs text-gray-600 border-t border-gray-800">
+            論文参考: tokugikon 2018.11.26 no.291 安藤俊幸（花王株式会社）
+        </footer>
+    </div>
+
+    <!-- Loading overlay -->
+    {% include 'partials/_loading_spinner.html' %}
+
+    <script src="{{ url_for('static', filename='js/ajax_helpers.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

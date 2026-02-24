@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+{% block title %}使い方ガイド - 特許クリアランス調査{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-100">使い方ガイド</h2>
+        <p class="text-sm text-gray-400 mt-1">本システムの操作手順を、ワークフローに沿って解説します。</p>
+    </div>
+
+    <!-- Progress flow -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between text-xs text-gray-500 mb-2">
+            <span>START</span><span>GOAL</span>
+        </div>
+        <div class="flex items-center gap-1">
+            <a href="#step1" class="flex-1 bg-brand-600/30 border border-brand-500/40 rounded-l-lg py-2 px-2 text-center text-xs text-brand-300 hover:bg-brand-600/50 transition-colors">
+                1. 自社特許
+            </a>
+            <a href="#step2" class="flex-1 bg-brand-600/30 border border-brand-500/40 py-2 px-2 text-center text-xs text-brand-300 hover:bg-brand-600/50 transition-colors">
+                2. 候補DB
+            </a>
+            <a href="#step-vec" class="flex-1 bg-brand-600/30 border border-brand-500/40 py-2 px-2 text-center text-xs text-brand-300 hover:bg-brand-600/50 transition-colors">
+                ベクトル化
+            </a>
+            <a href="#step3" class="flex-1 bg-brand-600/30 border border-brand-500/40 py-2 px-2 text-center text-xs text-brand-300 hover:bg-brand-600/50 transition-colors">
+                3. 調査
+            </a>
+            <a href="#step4" class="flex-1 bg-brand-600/30 border border-brand-500/40 py-2 px-2 text-center text-xs text-brand-300 hover:bg-brand-600/50 transition-colors">
+                4. 分類器
+            </a>
+            <a href="#step5" class="flex-1 bg-brand-600/30 border border-brand-500/40 rounded-r-lg py-2 px-2 text-center text-xs text-brand-300 hover:bg-brand-600/50 transition-colors">
+                5. 可視化
+            </a>
+        </div>
+    </div>
+
+    <!-- Step 1 -->
+    <section id="step1" class="mb-10">
+        <div class="flex items-center gap-3 mb-4">
+            <span class="flex-shrink-0 w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center text-white font-bold text-sm">1</span>
+            <h3 class="text-lg font-bold text-gray-100">自社特許を登録する</h3>
+        </div>
+        <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 space-y-4">
+            <p class="text-sm text-gray-300">
+                クリアランス調査の基準となる自社特許（または対象特許）を登録します。
+            </p>
+            <div class="space-y-3">
+                <div class="flex items-start gap-3">
+                    <span class="flex-shrink-0 w-6 h-6 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-xs text-gray-400 mt-0.5">A</span>
+                    <div>
+                        <p class="text-sm font-medium text-gray-200">サンプルデータで試す</p>
+                        <p class="text-xs text-gray-500">「サンプル自社特許を読み込む」ボタンをクリック。ガスバリアフィルム関連の5件が登録されます。</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="flex-shrink-0 w-6 h-6 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-xs text-gray-400 mt-0.5">B</span>
+                    <div>
+                        <p class="text-sm font-medium text-gray-200">自分のCSVをアップロード</p>
+                        <p class="text-xs text-gray-500">
+                            CSVファイルに以下の列を含めてください。
+                        </p>
+                        <div class="mt-2 overflow-x-auto">
+                            <table class="text-xs text-gray-400 border-collapse">
+                                <thead><tr class="border-b border-gray-700">
+                                    <th class="py-1 pr-4 text-left text-gray-500">列名</th>
+                                    <th class="py-1 pr-4 text-left text-gray-500">区分</th>
+                                    <th class="py-1 text-left text-gray-500">説明</th>
+                                </tr></thead>
+                                <tbody>
+                                    <tr class="border-b border-gray-800"><td class="py-1 pr-4 font-mono text-brand-400">patent_id</td><td class="py-1 pr-4 text-gray-300">必須</td><td class="py-1">特許番号（例：JP2021-073012）</td></tr>
+                                    <tr class="border-b border-gray-800"><td class="py-1 pr-4 font-mono text-brand-400">title</td><td class="py-1 pr-4 text-gray-300">必須</td><td class="py-1">発明の名称</td></tr>
+                                    <tr class="border-b border-gray-800"><td class="py-1 pr-4 font-mono text-brand-400">abstract</td><td class="py-1 pr-4 text-gray-500">-</td><td class="py-1">要約</td></tr>
+                                    <tr class="border-b border-gray-800"><td class="py-1 pr-4 font-mono text-brand-400">claims</td><td class="py-1 pr-4 text-gray-500">-</td><td class="py-1">請求項</td></tr>
+                                    <tr><td class="py-1 pr-4 font-mono text-brand-400">description</td><td class="py-1 pr-4 text-gray-500">-</td><td class="py-1">明細書</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+                「候補特許CSVテンプレート」リンクからCSVのひな形をダウンロードできます。
+            </p>
+        </div>
+    </section>
+
+    <!-- Step 2 -->
+    <section id="step2" class="mb-10">
+        <div class="flex items-center gap-3 mb-4">
+            <span class="flex-shrink-0 w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center text-white font-bold text-sm">2</span>
+            <h3 class="text-lg font-bold text-gray-100">候補特許DBを登録する</h3>
+        </div>
+        <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 space-y-4">
+            <p class="text-sm text-gray-300">
+                クリアランス調査の対象となる候補特許群（先行技術）を登録します。
+                自社特許と同様に、サンプルデータまたはCSVアップロードで登録できます。
+            </p>
+            <div class="space-y-2">
+                <p class="text-sm text-gray-200 font-medium">CSV列フォーマット</p>
+                <p class="text-xs text-gray-500">
+                    自社特許と同じ列構成に加え、<code class="text-gray-400">label</code> 列を含めると
+                    分類器の学習データとして使用できます。
+                </p>
+                <div class="flex gap-4 text-xs">
+                    <span class="text-emerald-400">label=1 → 関連特許（正解）</span>
+                    <span class="text-red-400">label=0 → 無関係（ノイズ）</span>
+                    <span class="text-gray-500">空欄 → 未ラベル（予測対象）</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Vectorization -->
+    <section id="step-vec" class="mb-10">
+        <div class="flex items-center gap-3 mb-4">
+            <span class="flex-shrink-0 w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center text-white font-bold text-sm">&#x2699;</span>
+            <h3 class="text-lg font-bold text-gray-100">ベクトル化を実行する</h3>
+        </div>
+        <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 space-y-4">
+            <p class="text-sm text-gray-300">
+                自社特許と候補特許DBの<strong class="text-amber-300">両方を登録した後</strong>、サイドバーの
+                「ベクトル化を実行」ボタンを押してください。
+                この処理により、テキストが数値ベクトルに変換され、類似度計算が可能になります。
+            </p>
+
+            <h4 class="text-sm font-semibold text-gray-300">サイドバー設定項目</h4>
+            <div class="space-y-3 text-xs">
+                <div class="bg-gray-800/50 rounded-md p-3">
+                    <p class="text-gray-200 font-medium mb-1">ベクトル化手法</p>
+                    <table class="w-full text-gray-400">
+                        <tbody>
+                            <tr class="border-b border-gray-700"><td class="py-1 pr-3 font-mono">TF-IDF</td><td class="py-1">単語の出現頻度と希少性を組み合わせた古典的手法。高速で安定。</td></tr>
+                            <tr class="border-b border-gray-700"><td class="py-1 pr-3 font-mono">TF-IDF + LSA</td><td class="py-1">TF-IDFに潜在意味解析を適用し次元削減。同義語対応が向上。</td></tr>
+                            <tr class="border-b border-gray-700"><td class="py-1 pr-3 font-mono">doc2vec (PV-DBOW)</td><td class="py-1">文書レベルの分散表現。語順を無視した高速モデル。</td></tr>
+                            <tr class="border-b border-gray-700"><td class="py-1 pr-3 font-mono">doc2vec (PV-DM)</td><td class="py-1">語順を考慮した分散表現。高品質だが低速。</td></tr>
+                            <tr><td class="py-1 pr-3 font-mono">Word2Vec + 平均</td><td class="py-1">単語ベクトルの平均で文書を表現。</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="bg-gray-800/50 rounded-md p-3">
+                    <p class="text-gray-200 font-medium mb-1">その他のパラメータ</p>
+                    <ul class="text-gray-400 space-y-1 list-disc list-inside">
+                        <li><strong>最大特徴数</strong>：語彙サイズの上限（デフォルト: 10,000）</li>
+                        <li><strong>LSA次元数</strong>：LSA使用時の圧縮後次元（デフォルト: 100）</li>
+                        <li><strong>ストップワード除去</strong>：一般語・特許定型語の除去</li>
+                        <li><strong>請求項重視</strong>：請求項のトークンに5倍の重みを付与</li>
+                        <li><strong>複数クエリ集約</strong>：最大スコア / 平均 / 結合ベクトル</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="bg-gray-800/50 border border-gray-700/30 rounded-md p-3 text-xs text-gray-400">
+                設定を変更した場合は再度ベクトル化を実行してください。設定変更だけでは既存のベクトルは更新されません。
+            </div>
+        </div>
+    </section>
+
+    <!-- Step 3 -->
+    <section id="step3" class="mb-10">
+        <div class="flex items-center gap-3 mb-4">
+            <span class="flex-shrink-0 w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center text-white font-bold text-sm">3</span>
+            <h3 class="text-lg font-bold text-gray-100">クリアランス調査を実行する</h3>
+        </div>
+        <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 space-y-4">
+            <p class="text-sm text-gray-300">
+                ベクトル化完了後、「クリアランス調査」タブで調査を実行します。
+            </p>
+
+            <div class="space-y-3">
+                <div class="flex items-start gap-3">
+                    <span class="flex-shrink-0 w-6 h-6 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-xs text-gray-400 mt-0.5">1</span>
+                    <div>
+                        <p class="text-sm font-medium text-gray-200">STEP 1: 調査対象の自社特許を選択</p>
+                        <p class="text-xs text-gray-500">チェックボックスで、類似度検索に使用する自社特許を選びます（複数選択可）。</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="flex-shrink-0 w-6 h-6 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-xs text-gray-400 mt-0.5">2</span>
+                    <div>
+                        <p class="text-sm font-medium text-gray-200">STEP 2: 表示件数を設定して調査実行</p>
+                        <p class="text-xs text-gray-500">スライダーで表示件数を調整し、「クリアランス調査を実行」ボタンを押します。</p>
+                    </div>
+                </div>
+            </div>
+
+            <h4 class="text-sm font-semibold text-gray-300 pt-2">出力される結果</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div class="bg-gray-800/50 rounded-md p-3">
+                    <p class="text-gray-200 font-medium mb-1">自社特許別サマリー</p>
+                    <p class="text-gray-500">各自社特許について、最高類似度、高スコア候補の件数、最も類似する候補特許を表示。</p>
+                </div>
+                <div class="bg-gray-800/50 rounded-md p-3">
+                    <p class="text-gray-200 font-medium mb-1">Precision/Recall 表</p>
+                    <p class="text-gray-500">上位K件での精度・再現率（label列がある場合）。</p>
+                </div>
+                <div class="bg-gray-800/50 rounded-md p-3">
+                    <p class="text-gray-200 font-medium mb-1">類似度バーチャート</p>
+                    <p class="text-gray-500">順位別の類似度スコアを棒グラフで表示。</p>
+                </div>
+                <div class="bg-gray-800/50 rounded-md p-3">
+                    <p class="text-gray-200 font-medium mb-1">ヒートマップ</p>
+                    <p class="text-gray-500">候補特許 × 自社特許の全組合せの類似度を色で可視化。</p>
+                </div>
+                <div class="bg-gray-800/50 rounded-md p-3">
+                    <p class="text-gray-200 font-medium mb-1">上位10件の詳細カード</p>
+                    <p class="text-gray-500">類似度スコア、特許番号、タイトルを一覧表示。</p>
+                </div>
+                <div class="bg-gray-800/50 rounded-md p-3">
+                    <p class="text-gray-200 font-medium mb-1">構成要素分析</p>
+                    <p class="text-gray-500">請求項を構成要素に分解し、候補特許内の対応箇所を特定。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Step 4 -->
+    <section id="step4" class="mb-10">
+        <div class="flex items-center gap-3 mb-4">
+            <span class="flex-shrink-0 w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center text-white font-bold text-sm">4</span>
+            <h3 class="text-lg font-bold text-gray-100">分類器で関連度を予測する</h3>
+        </div>
+        <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 space-y-4">
+            <p class="text-sm text-gray-300">
+                候補特許DBに <code class="text-gray-400">label</code> 列（1=関連, 0=無関係）がある場合、
+                機械学習で未ラベル特許の関連度を自動予測できます。
+            </p>
+
+            <div class="space-y-3">
+                <div class="flex items-start gap-3">
+                    <span class="flex-shrink-0 w-6 h-6 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-xs text-gray-400 mt-0.5">1</span>
+                    <div>
+                        <p class="text-sm font-medium text-gray-200">分類器を学習</p>
+                        <p class="text-xs text-gray-500">
+                            アルゴリズムを選択し（デフォルト: ランダムフォレスト）、テスト割合・CV分割数を設定して
+                            「分類器を学習する」をクリック。正解率、精度、再現率、CV-F1と混同行列が表示されます。
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="flex-shrink-0 w-6 h-6 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-xs text-gray-400 mt-0.5">2</span>
+                    <div>
+                        <p class="text-sm font-medium text-gray-200">アルゴリズム比較</p>
+                        <p class="text-xs text-gray-500">
+                            複数のアルゴリズムを同時に比較し、F1スコアのランキングを確認できます。
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="flex-shrink-0 w-6 h-6 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-xs text-gray-400 mt-0.5">3</span>
+                    <div>
+                        <p class="text-sm font-medium text-gray-200">未ラベル特許を予測</p>
+                        <p class="text-xs text-gray-500">
+                            学習済み分類器で未ラベルの候補特許を「関連 / 無関係」に自動分類します。
+                            結果はCSVダウンロード可能です。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Step 5 -->
+    <section id="step5" class="mb-10">
+        <div class="flex items-center gap-3 mb-4">
+            <span class="flex-shrink-0 w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center text-white font-bold text-sm">5</span>
+            <h3 class="text-lg font-bold text-gray-100">結果を可視化する</h3>
+        </div>
+        <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 space-y-4">
+            <p class="text-sm text-gray-300">
+                「可視化」タブで、調査結果をグラフィカルに分析できます。
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div class="bg-gray-800/50 rounded-md p-3">
+                    <p class="text-gray-200 font-medium mb-1">散布図</p>
+                    <p class="text-gray-500">SVD/PCAで2次元に圧縮し、特許文書の分布を表示。自社/候補/ラベルで色分け。</p>
+                </div>
+                <div class="bg-gray-800/50 rounded-md p-3">
+                    <p class="text-gray-200 font-medium mb-1">類似度ヒストグラム</p>
+                    <p class="text-gray-500">類似度スコアの分布を確認し、閾値設定の参考にできます。</p>
+                </div>
+                <div class="bg-gray-800/50 rounded-md p-3">
+                    <p class="text-gray-200 font-medium mb-1">TF-IDF重要語</p>
+                    <p class="text-gray-500">各自社特許で重要な単語トップ20を棒グラフで表示。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Workflow summary -->
+    <section class="mb-10">
+        <h3 class="text-lg font-bold text-gray-100 mb-4">典型的なワークフロー</h3>
+        <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5">
+            <ol class="space-y-2 text-sm text-gray-300">
+                <li class="flex items-start gap-2">
+                    <span class="text-brand-400 font-mono font-bold">01</span>
+                    「自社特許登録」で自社特許（またはサンプル）を読み込む
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-brand-400 font-mono font-bold">02</span>
+                    「候補特許DB」で調査対象の候補特許を読み込む
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-brand-400 font-mono font-bold">03</span>
+                    サイドバーでベクトル化手法を選択し「ベクトル化を実行」
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-brand-400 font-mono font-bold">04</span>
+                    「クリアランス調査」で調査を実行し、類似特許を確認
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-brand-400 font-mono font-bold">05</span>
+                    必要に応じて「分類器学習」でラベル付きデータからモデルを構築
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-brand-400 font-mono font-bold">06</span>
+                    「可視化」で結果をグラフィカルに分析
+                </li>
+            </ol>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="mb-10">
+        <h3 class="text-lg font-bold text-gray-100 mb-4">よくある質問</h3>
+        <div class="space-y-3">
+            <details class="bg-gray-900 border border-gray-700/50 rounded-lg group">
+                <summary class="p-4 cursor-pointer text-sm font-medium text-gray-200 hover:text-gray-100 transition-colors">
+                    Q. ベクトル化手法はどれを選べばよいですか？
+                </summary>
+                <div class="px-4 pb-4 text-sm text-gray-400">
+                    初めての場合は<strong class="text-gray-300">TF-IDF</strong>を推奨します。
+                    高速で安定した結果が得られます。
+                    同義語への対応を強化したい場合は TF-IDF + LSA を、
+                    大量の学習データがある場合は Doc2Vec も試す価値があります。
+                </div>
+            </details>
+            <details class="bg-gray-900 border border-gray-700/50 rounded-lg group">
+                <summary class="p-4 cursor-pointer text-sm font-medium text-gray-200 hover:text-gray-100 transition-colors">
+                    Q. 集約戦略（最大/平均/結合）はどれがよいですか？
+                </summary>
+                <div class="px-4 pb-4 text-sm text-gray-400">
+                    クリアランス調査（リスク回避）では<strong class="text-gray-300">最大スコア</strong>を推奨します。
+                    いずれかの自社特許と類似度が高い候補を漏れなく検出します。
+                    平均スコアはポートフォリオ全体との関連を見たい場合に適しています。
+                </div>
+            </details>
+            <details class="bg-gray-900 border border-gray-700/50 rounded-lg group">
+                <summary class="p-4 cursor-pointer text-sm font-medium text-gray-200 hover:text-gray-100 transition-colors">
+                    Q. label列は必須ですか？
+                </summary>
+                <div class="px-4 pb-4 text-sm text-gray-400">
+                    いいえ。label列がなくてもクリアランス調査（類似度検索）は実行できます。
+                    label列は分類器学習（Tab4）で教師あり学習を行う場合にのみ必要です。
+                </div>
+            </details>
+            <details class="bg-gray-900 border border-gray-700/50 rounded-lg group">
+                <summary class="p-4 cursor-pointer text-sm font-medium text-gray-200 hover:text-gray-100 transition-colors">
+                    Q. 設定を変更したら再ベクトル化は必要ですか？
+                </summary>
+                <div class="px-4 pb-4 text-sm text-gray-400">
+                    はい。ベクトル化手法、最大特徴数、ストップワード設定、請求項重視設定を変更した場合は
+                    再度「ベクトル化を実行」してください。
+                    変更前の古いベクトルのままでは正確な結果が得られません。
+                </div>
+            </details>
+        </div>
+    </section>
+</div>
+{% endblock %}

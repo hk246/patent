@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+{% block title %}専門用語解説 - 特許クリアランス調査{% endblock %}
+
+{# ── Glossary item macro ── #}
+{% macro glossary_item(title, expanded=false) %}
+<details class="bg-gray-900 border border-gray-700/50 rounded-lg group" {{ 'open' if expanded }}>
+    <summary class="px-5 py-3 cursor-pointer text-gray-200 font-medium hover:bg-gray-800/50 rounded-lg flex justify-between items-center text-sm">
+        {{ title }}
+        <svg class="w-4 h-4 text-gray-500 transform group-open:rotate-180 transition-transform flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+    </summary>
+    <div class="px-5 pb-4">
+        {{ caller() }}
+    </div>
+</details>
+{% endmacro %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold text-gray-100">専門用語解説</h2>
+        <p class="text-xs text-gray-500 mt-1">本システムで使用している技術用語をカテゴリ別に解説します。</p>
+    </div>
+
+    <!-- Sub-tabs -->
+    <div class="flex border-b border-gray-700 mb-6 overflow-x-auto scrollbar-hide">
+        <button class="glossary-tab active px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 border-brand-500 text-brand-400"
+                data-target="tab-vectorization">ベクトル化手法</button>
+        <button class="glossary-tab px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 border-transparent text-gray-400 hover:text-gray-200"
+                data-target="tab-ml">機械学習・分類</button>
+        <button class="glossary-tab px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 border-transparent text-gray-400 hover:text-gray-200"
+                data-target="tab-visualization">可視化・類似度</button>
+        <button class="glossary-tab px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 border-transparent text-gray-400 hover:text-gray-200"
+                data-target="tab-patent">特許調査</button>
+    </div>
+
+    <!-- ═══ ベクトル化手法 ═══ -->
+    <div id="tab-vectorization" class="glossary-content space-y-4">
+        <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 mb-4">
+            <h3 class="text-lg font-semibold text-gray-100 mb-2">テキストのベクトル化とは</h3>
+            <p class="text-sm text-gray-300">
+                文章（テキスト）をコンピュータが処理できる数値のベクトル（数値の配列）に変換する技術です。
+                特許文書をベクトル化することで、文書間の類似度を数値として計算できるようになります。
+            </p>
+        </div>
+
+        {% call() glossary_item("BoW（Bag-of-Words）— 最もシンプルな手法", true) %}
+        <p class="text-sm text-gray-300 mb-2">文書中の単語の出現回数を数えてベクトルにする最も基本的な手法です。</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="text-sm text-gray-300 space-y-1">
+                <p>例: 文書A「ガスバリア フィルム 製造 ガスバリア」</p>
+                <p class="text-gray-400">→ BoWベクトル: ガスバリア=2, フィルム=1, 製造=1</p>
+                <ul class="mt-2 space-y-0.5 text-xs text-gray-400">
+                    <li class="text-emerald-400/80">+ シンプルで高速</li>
+                    <li class="text-emerald-400/80">+ 直感的に理解しやすい</li>
+                    <li class="text-red-400/80">- 単語の順序を無視する</li>
+                    <li class="text-red-400/80">- よく使われる単語が大きな値になりすぎる</li>
+                </ul>
+            </div>
+            <div class="overflow-x-auto rounded border border-gray-700/50">
+                <table class="w-full text-xs text-gray-400">
+                    <thead class="bg-gray-800/80"><tr><th class="px-3 py-1.5">単語</th><th class="px-3 py-1.5">文書A</th><th class="px-3 py-1.5">文書B</th></tr></thead>
+                    <tbody class="divide-y divide-gray-800">
+                        <tr><td class="px-3 py-1">ガスバリア</td><td class="px-3 py-1">2</td><td class="px-3 py-1">1</td></tr>
+                        <tr><td class="px-3 py-1">フィルム</td><td class="px-3 py-1">1</td><td class="px-3 py-1">2</td></tr>
+                        <tr><td class="px-3 py-1">製造</td><td class="px-3 py-1">1</td><td class="px-3 py-1">0</td></tr>
+                        <tr><td class="px-3 py-1">ポリビニルアルコール</td><td class="px-3 py-1">0</td><td class="px-3 py-1">1</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endcall %}
+
+        {% call() glossary_item("TF-IDF — 本システムのデフォルト手法", true) %}
+        <p class="text-sm text-gray-300 mb-3">単語の重要度を TF（出現頻度）と IDF（逆文書頻度）の2つの指標で評価します。TF-IDF = TF x IDF で「その文書に特徴的な単語」を高く評価します。</p>
+        <div class="overflow-x-auto rounded border border-gray-700/50 mb-3">
+            <table class="w-full text-xs text-gray-400">
+                <thead class="bg-gray-800/80"><tr><th class="px-3 py-1.5 text-left">パラメータ</th><th class="px-3 py-1.5 text-left">意味</th><th class="px-3 py-1.5 text-left">設定</th></tr></thead>
+                <tbody class="divide-y divide-gray-800">
+                    <tr><td class="px-3 py-1.5">max_features</td><td class="px-3 py-1.5">使用する単語の最大数</td><td class="px-3 py-1.5">10,000（調整可）</td></tr>
+                    <tr><td class="px-3 py-1.5">ngram_range</td><td class="px-3 py-1.5">連続する単語のまとまり単位</td><td class="px-3 py-1.5">(1,2)</td></tr>
+                    <tr><td class="px-3 py-1.5">sublinear_tf</td><td class="px-3 py-1.5">TFの値を対数スケールにする</td><td class="px-3 py-1.5">True</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="bg-gray-800/50 rounded-lg p-3 text-xs text-gray-400 font-mono">
+            「ガスバリア」→ TF=高, IDF=高 → TF-IDF=高 (重要語)<br>
+            「する」→ TF=高, IDF=低 → TF-IDF=低 (重要でない)
+        </div>
+        {% endcall %}
+
+        {% call() glossary_item("word2vec — 単語の意味をベクトルで表現", false) %}
+        <p class="text-sm text-gray-300 mb-2">ニューラルネットワークで大量テキストから単語の「文脈」を学習し、意味的に近い単語がベクトル空間で近くなるようにします。</p>
+        <div class="overflow-x-auto rounded border border-gray-700/50">
+            <table class="w-full text-xs text-gray-400">
+                <thead class="bg-gray-800/80"><tr><th class="px-3 py-1.5 text-left">パラメータ</th><th class="px-3 py-1.5 text-left">意味</th><th class="px-3 py-1.5 text-left">推奨値</th></tr></thead>
+                <tbody class="divide-y divide-gray-800">
+                    <tr><td class="px-3 py-1.5">vector_size</td><td class="px-3 py-1.5">単語ベクトルの次元数</td><td class="px-3 py-1.5">100〜300</td></tr>
+                    <tr><td class="px-3 py-1.5">window</td><td class="px-3 py-1.5">文脈として考慮する前後の単語数</td><td class="px-3 py-1.5">5〜10</td></tr>
+                    <tr><td class="px-3 py-1.5">epochs</td><td class="px-3 py-1.5">学習の繰り返し回数</td><td class="px-3 py-1.5">10〜100</td></tr>
+                </tbody>
+            </table>
+        </div>
+        {% endcall %}
+
+        {% call() glossary_item("doc2vec — 文書全体をベクトルで表現（論文の主要手法）", false) %}
+        <p class="text-sm text-gray-300 mb-3">word2vecを拡張し、文書（パラグラフ）全体をベクトルで表現する手法。論文で最も効果があったと報告されています。</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="text-sm text-gray-300 space-y-2">
+                <p><strong class="text-brand-400">PV-DBOW（dm=0）:</strong> 文書ベクトルから文書内の単語を予測。シンプルで高速。</p>
+                <p><strong class="text-brand-400">PV-DM（dm=1）:</strong> 文書ベクトル＋前後の単語から次の単語を予測。より精緻。</p>
+            </div>
+            <div class="overflow-x-auto rounded border border-gray-700/50">
+                <table class="w-full text-xs text-gray-400">
+                    <thead class="bg-gray-800/80"><tr><th class="px-3 py-1.5 text-left">パラメータ</th><th class="px-3 py-1.5 text-left">推奨値</th></tr></thead>
+                    <tbody class="divide-y divide-gray-800">
+                        <tr><td class="px-3 py-1.5">vector_size</td><td class="px-3 py-1.5 text-brand-400">200（論文値）</td></tr>
+                        <tr><td class="px-3 py-1.5">epochs</td><td class="px-3 py-1.5 text-brand-400">100（論文値）</td></tr>
+                        <tr><td class="px-3 py-1.5">window</td><td class="px-3 py-1.5">5〜10</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endcall %}
+
+        {% call() glossary_item("LSA（潜在意味解析）— TF-IDFの次元削減版", false) %}
+        <p class="text-sm text-gray-300 mb-2">TF-IDFで得た高次元ベクトルをSVD（特異値分解）で低次元に圧縮します。計算の高速化、同義語の関係の捕捉、過学習の抑制に効果があります。</p>
+        <p class="text-xs text-gray-500">推奨次元数: 100〜300</p>
+        {% endcall %}
+    </div>
+
+    <!-- ═══ 機械学習・分類 ═══ -->
+    <div id="tab-ml" class="glossary-content hidden space-y-4">
+        {% call() glossary_item("教師あり学習 / 教師なし学習", true) %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-300">
+            <div>
+                <p class="font-semibold text-brand-400 mb-1">教師あり学習（本システムの主な手法）</p>
+                <p>正解ラベル付きデータで学習。「この特許は関連(1)」「この特許は無関係(0)」のラベルを与えてモデルを学習し、新しい特許に対して自動で関連度を予測します。</p>
+            </div>
+            <div>
+                <p class="font-semibold text-sky-400 mb-1">教師なし学習</p>
+                <p>ラベルなしで文書をグループ化（クラスタリング）。本システムの「散布図」がこれに相当します。</p>
+            </div>
+        </div>
+        {% endcall %}
+
+        {% call() glossary_item("評価指標: 精度・再現率・F1スコア", true) %}
+        <p class="text-sm text-gray-300 mb-3">クリアランス調査では調査漏れ（見逃し）が致命的リスクとなるため、再現率を重視します。</p>
+        <div class="overflow-x-auto rounded border border-gray-700/50 mb-3">
+            <table class="w-full text-xs text-gray-400">
+                <thead class="bg-gray-800/80"><tr><th class="px-3 py-2 text-left">指標</th><th class="px-3 py-2 text-left">計算式</th><th class="px-3 py-2 text-left">クリアランスでの意味</th></tr></thead>
+                <tbody class="divide-y divide-gray-800">
+                    <tr><td class="px-3 py-2 font-semibold">精度 (Precision)</td><td class="px-3 py-2">TP / (TP + FP)</td><td class="px-3 py-2">関連と予測した中で実際に関連する割合</td></tr>
+                    <tr><td class="px-3 py-2 font-semibold">再現率 (Recall)</td><td class="px-3 py-2">TP / (TP + FN)</td><td class="px-3 py-2">実際の関連特許のうち正しく検出できた割合</td></tr>
+                    <tr><td class="px-3 py-2 font-semibold">F1スコア</td><td class="px-3 py-2">2xPxR / (P+R)</td><td class="px-3 py-2">精度と再現率の調和平均</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="text-xs text-amber-400">クリアランス調査では FN（見逃し）を最小化 することが最重要です。</p>
+        {% endcall %}
+
+        {% call() glossary_item("交差検証（Cross-Validation）", false) %}
+        <p class="text-sm text-gray-300 mb-2">データを複数回に分けて学習・評価を繰り返し、モデルの汎化性能を確認する手法です。</p>
+        <div class="bg-gray-800/50 rounded-lg p-3 text-xs text-gray-400 font-mono">
+            K=5: データ[A][B][C][D][E]<br>
+            試行1: 学習=[B][C][D][E] テスト=[A]<br>
+            試行2: 学習=[A][C][D][E] テスト=[B]<br>
+            ...<br>
+            最終スコア = 5回のスコアの平均 +/- 標準偏差
+        </div>
+        {% endcall %}
+
+        {% call() glossary_item("各分類アルゴリズムの特徴（論文: 13種類比較）", false) %}
+        <div class="overflow-x-auto rounded border border-gray-700/50">
+            <table class="w-full text-xs text-gray-400">
+                <thead class="bg-gray-800/80"><tr><th class="px-3 py-2 text-left">アルゴリズム</th><th class="px-3 py-2 text-left">論文評価</th><th class="px-3 py-2 text-left">特徴</th></tr></thead>
+                <tbody class="divide-y divide-gray-800">
+                    <tr><td class="px-3 py-1.5">エイダブースト</td><td class="px-3 py-1.5 text-emerald-400">最良</td><td class="px-3 py-1.5">弱い分類器を逐次強化</td></tr>
+                    <tr><td class="px-3 py-1.5">ランダムフォレスト</td><td class="px-3 py-1.5 text-emerald-400">最良</td><td class="px-3 py-1.5">多数の決定木のアンサンブル</td></tr>
+                    <tr><td class="px-3 py-1.5">SVM</td><td class="px-3 py-1.5 text-sky-400">良好</td><td class="px-3 py-1.5">高次元データに強い</td></tr>
+                    <tr><td class="px-3 py-1.5">ロジスティック回帰</td><td class="px-3 py-1.5 text-sky-400">良好</td><td class="px-3 py-1.5">シンプルで解釈しやすい</td></tr>
+                    <tr><td class="px-3 py-1.5">ニューラルネット(MLP)</td><td class="px-3 py-1.5 text-sky-400">良好</td><td class="px-3 py-1.5">大量データで真価を発揮</td></tr>
+                    <tr><td class="px-3 py-1.5">勾配ブースティング</td><td class="px-3 py-1.5 text-sky-400">良好</td><td class="px-3 py-1.5">決定木を逐次改善</td></tr>
+                    <tr><td class="px-3 py-1.5">k近傍法</td><td class="px-3 py-1.5 text-gray-500">普通</td><td class="px-3 py-1.5">近傍k件の多数決</td></tr>
+                    <tr><td class="px-3 py-1.5">ナイーブベイズ</td><td class="px-3 py-1.5 text-gray-500">普通</td><td class="px-3 py-1.5">独立性仮定のベイズ分類</td></tr>
+                    <tr><td class="px-3 py-1.5">決定木</td><td class="px-3 py-1.5 text-gray-500">普通</td><td class="px-3 py-1.5">解釈しやすいが過学習しやすい</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">論文（tokugikon 2018）ではAdaBoost・ランダムフォレストが最良の結果を示しました。</p>
+        {% endcall %}
+    </div>
+
+    <!-- ═══ 可視化・類似度 ═══ -->
+    <div id="tab-visualization" class="glossary-content hidden space-y-4">
+        {% call() glossary_item("コサイン類似度 — 本システムの類似度指標", true) %}
+        <p class="text-sm text-gray-300 mb-3">2つのベクトルが同じ方向を向いているかで類似度を測ります。値の範囲はテキストの場合0〜1です。</p>
+        <div class="overflow-x-auto rounded border border-gray-700/50 mb-3">
+            <table class="w-full text-xs text-gray-400">
+                <thead class="bg-gray-800/80"><tr><th class="px-3 py-2 text-left">スコア</th><th class="px-3 py-2 text-left">意味</th></tr></thead>
+                <tbody class="divide-y divide-gray-800">
+                    <tr><td class="px-3 py-1.5 text-red-400">0.7以上</td><td class="px-3 py-1.5">非常に類似（要注意）</td></tr>
+                    <tr><td class="px-3 py-1.5 text-amber-400">0.5〜0.7</td><td class="px-3 py-1.5">類似（確認推奨）</td></tr>
+                    <tr><td class="px-3 py-1.5 text-sky-400">0.3〜0.5</td><td class="px-3 py-1.5">部分的に類似</td></tr>
+                    <tr><td class="px-3 py-1.5 text-gray-500">0.3未満</td><td class="px-3 py-1.5">ほぼ無関係</td></tr>
+                </tbody>
+            </table>
+        </div>
+        {% endcall %}
+
+        {% call() glossary_item("複数クエリの集約戦略", true) %}
+        <p class="text-sm text-gray-300 mb-3">自社特許が複数件ある場合の集約方法です。</p>
+        <div class="overflow-x-auto rounded border border-gray-700/50">
+            <table class="w-full text-xs text-gray-400">
+                <thead class="bg-gray-800/80"><tr><th class="px-3 py-2 text-left">戦略</th><th class="px-3 py-2 text-left">計算式</th><th class="px-3 py-2 text-left">推奨用途</th></tr></thead>
+                <tbody class="divide-y divide-gray-800">
+                    <tr><td class="px-3 py-1.5 font-semibold text-brand-400">最大スコア(max)</td><td class="px-3 py-1.5">max(sim(自社i, 候補j))</td><td class="px-3 py-1.5 text-gray-300">クリアランス調査向け</td></tr>
+                    <tr><td class="px-3 py-1.5">平均スコア(mean)</td><td class="px-3 py-1.5">mean(sim(自社i, 候補j))</td><td class="px-3 py-1.5">技術ポートフォリオ分析</td></tr>
+                    <tr><td class="px-3 py-1.5">結合ベクトル(combined)</td><td class="px-3 py-1.5">sim(mean(自社ベクトル), 候補j)</td><td class="px-3 py-1.5">技術領域の中心からの分析</td></tr>
+                </tbody>
+            </table>
+        </div>
+        {% endcall %}
+
+        {% call() glossary_item("SVD / PCA による次元削減", false) %}
+        <p class="text-sm text-gray-300 mb-2">高次元の特許ベクトルを2次元に圧縮して可視化します。近くにある点は意味的に類似した特許です。</p>
+        <div class="overflow-x-auto rounded border border-gray-700/50">
+            <table class="w-full text-xs text-gray-400">
+                <thead class="bg-gray-800/80"><tr><th class="px-3 py-2 text-left"></th><th class="px-3 py-2 text-left">SVD (LSA)</th><th class="px-3 py-2 text-left">PCA</th></tr></thead>
+                <tbody class="divide-y divide-gray-800">
+                    <tr><td class="px-3 py-1.5">計算対象</td><td class="px-3 py-1.5">文書×単語の行列</td><td class="px-3 py-1.5">共分散行列</td></tr>
+                    <tr><td class="px-3 py-1.5">大規模データ</td><td class="px-3 py-1.5 text-emerald-400">得意</td><td class="px-3 py-1.5 text-gray-500">遅い場合あり</td></tr>
+                    <tr><td class="px-3 py-1.5">推奨</td><td class="px-3 py-1.5 text-brand-400">TF-IDFと相性良</td><td class="px-3 py-1.5">参考用</td></tr>
+                </tbody>
+            </table>
+        </div>
+        {% endcall %}
+    </div>
+
+    <!-- ═══ 特許調査 ═══ -->
+    <div id="tab-patent" class="glossary-content hidden space-y-4">
+        {% call() glossary_item("特許クリアランス調査（FTO調査）とは", true) %}
+        <p class="text-sm text-gray-300 mb-3">新製品・新技術の製造・販売・使用が他社の有効特許権を侵害しないかを事前に調査することです。</p>
+        <div class="bg-gray-800/50 rounded-lg p-3 text-xs text-gray-400 font-mono mb-3">
+            1. 調査対象の製品・技術を特定<br>
+            2. 関連する特許を収集（候補特許DB）<br>
+            3. 自社製品との類似度を評価 &larr; 本システムの類似度検索<br>
+            4. 重要特許を選定・詳細分析 &larr; 本システムのランキング<br>
+            5. 法律専門家（弁理士）と連携して最終判断
+        </div>
+        <p class="text-xs text-amber-400">注意: 本システムの結果は参考情報です。最終的な侵害判断は弁理士・弁護士が行う必要があります。</p>
+        {% endcall %}
+
+        {% call() glossary_item("特許分類コード（IPC・FI・Fターム）", false) %}
+        <div class="text-sm text-gray-300 space-y-2">
+            <p><strong class="text-brand-400">IPC:</strong> 国際特許分類。全世界共通。例: C08J 5/18（プラスチックフィルムの製造）</p>
+            <p><strong class="text-brand-400">FI:</strong> 日本特許庁がIPCを細分化した分類。日本語特許の検索に特に有効。</p>
+            <p><strong class="text-brand-400">Fターム:</strong> 日本特許庁独自の多面的分類。技術的観点を複数の軸で分類。</p>
+        </div>
+        {% endcall %}
+
+        {% call() glossary_item("精度と再現率のトレードオフ", false) %}
+        <p class="text-sm text-gray-300 mb-3">確認数（K）を増やすと再現率は上がりますが精度は下がります。調査工数と見逃しリスクのバランスが重要です。</p>
+        <div class="overflow-x-auto rounded border border-gray-700/50">
+            <table class="w-full text-xs text-gray-400">
+                <thead class="bg-gray-800/80"><tr><th class="px-3 py-2 text-left">確認数(K)</th><th class="px-3 py-2 text-left">精度</th><th class="px-3 py-2 text-left">再現率</th><th class="px-3 py-2 text-left">説明</th></tr></thead>
+                <tbody class="divide-y divide-gray-800">
+                    <tr><td class="px-3 py-1.5">10</td><td class="px-3 py-1.5">0.80</td><td class="px-3 py-1.5">0.40</td><td class="px-3 py-1.5">40%しかカバーできない</td></tr>
+                    <tr><td class="px-3 py-1.5">30</td><td class="px-3 py-1.5">0.60</td><td class="px-3 py-1.5 text-emerald-400">0.90</td><td class="px-3 py-1.5 text-emerald-400">90%をカバー</td></tr>
+                    <tr><td class="px-3 py-1.5">50</td><td class="px-3 py-1.5">0.40</td><td class="px-3 py-1.5">1.00</td><td class="px-3 py-1.5">全件カバー（コスト高）</td></tr>
+                </tbody>
+            </table>
+        </div>
+        {% endcall %}
+
+        {% call() glossary_item("正解公報 / ノイズ公報", false) %}
+        <div class="overflow-x-auto rounded border border-gray-700/50 mb-2">
+            <table class="w-full text-xs text-gray-400">
+                <thead class="bg-gray-800/80"><tr><th class="px-3 py-2 text-left">用語</th><th class="px-3 py-2 text-left">意味</th><th class="px-3 py-2 text-left">label値</th></tr></thead>
+                <tbody class="divide-y divide-gray-800">
+                    <tr><td class="px-3 py-1.5">正解公報（シグナル）</td><td class="px-3 py-1.5">調査で関連すると判断された特許</td><td class="px-3 py-1.5 text-emerald-400">1</td></tr>
+                    <tr><td class="px-3 py-1.5">ノイズ公報</td><td class="px-3 py-1.5">関連しないと判断された特許</td><td class="px-3 py-1.5 text-red-400">0</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="text-xs text-gray-500">教師データの推奨: 各クラス50件以上（合計100件）</p>
+        {% endcall %}
+    </div>
+
+    <!-- References -->
+    <hr class="border-gray-800 mt-8 mb-4">
+    <div class="text-xs text-gray-500 space-y-1">
+        <p class="font-semibold text-gray-400">参考文献</p>
+        <p>安藤俊幸.「機械学習を用いた効率的な特許調査」tokugikon 2018.11.26. no.291, pp.50-64.</p>
+        <p>Quoc Le, Tomas Mikolov. "Distributed Representations of Sentences and Documents". ICML 2014.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tabs = document.querySelectorAll('.glossary-tab');
+    const contents = document.querySelectorAll('.glossary-content');
+
+    tabs.forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            tabs.forEach(t => {
+                t.classList.remove('border-brand-500', 'text-brand-400');
+                t.classList.add('border-transparent', 'text-gray-400');
+            });
+            tab.classList.add('border-brand-500', 'text-brand-400');
+            tab.classList.remove('border-transparent', 'text-gray-400');
+
+            contents.forEach(c => c.classList.add('hidden'));
+            const target = document.getElementById(tab.dataset.target);
+            if (target) target.classList.remove('hidden');
+        });
+    });
+});
+</script>
+{% endblock %}
