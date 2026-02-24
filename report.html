@@ -257,8 +257,20 @@
     <h4>3.3.3 セクション重み付け</h4>
     <p>
         Helmers et al.<sup>[4]</sup>の知見に基づき、特許文書のセクション毎に異なる重みを設定した（表1）。
-        各セクションから抽出されたトークンを重み倍数分だけ繰り返し結合することで、
-        TF値に対する間接的な重み付けを実現する。
+        特許文書 <em>d</em> のセクション集合を S = {claims, title, abstract, description} とし、
+        各セクション <em>s</em> から抽出されたトークン列を tokens(<em>d</em>, <em>s</em>)、
+        重み係数を <em>w<sub>s</sub></em> とする。
+        重み付き文書トークン列 T(<em>d</em>) を次式で定義する。
+    </p>
+    <div class="formula">
+        T(d) = ⨁<sub>s∈S</sub> tokens(d, s)<sup>⊕w<sub>s</sub></sup>
+    </div>
+    <p>
+        ここで ⊕ は系列の結合（concatenation）演算、上付き ⊕<em>w</em> は系列の <em>w</em> 回反復結合を表す。
+        これにより、重み <em>w<sub>s</sub></em> を持つセクションのトークンは出現頻度が <em>w<sub>s</sub></em> 倍となり、
+        TF-IDFの TF(t, d) に対して間接的な重み付けが実現される。
+        具体的には、セクション <em>s</em> に含まれる単語 <em>t</em> の重み付き後の出現回数は
+        count'(t, d) = Σ<sub>s∈S</sub> w<sub>s</sub> · count(t, d, s) となる。
     </p>
 
     <table>
@@ -279,82 +291,179 @@
     <h4>3.4.1 TF-IDF</h4>
     <p>
         TF-IDF（Term Frequency-Inverse Document Frequency）はRobertson (2004)<sup>[1]</sup>が理論的基盤を整理した
-        重み付け手法であり、本評価ではサブリニアTFスケーリングを適用した。
+        重み付け手法である。コーパス D = {d<sub>1</sub>, ..., d<sub>N</sub>} 中の文書 d に含まれる語 t の重みを以下で定義する。
+        本評価ではサブリニアTFスケーリングを適用した。
     </p>
     <div class="formula">
-        TF(t, d) = 1 + log(count(t, d)) &nbsp;&nbsp;（count &gt; 0のとき）
+        TF(t, d) = 1 + log<sub>e</sub>(count(t, d)) &nbsp;&nbsp;（count(t, d) &gt; 0 のとき、0 otherwise）
     </div>
     <div class="formula">
-        IDF(t) = log(N / df(t)) + 1
+        IDF(t) = log<sub>e</sub>(N / df(t)) + 1 &nbsp;&nbsp;（df(t) = |{d ∈ D : t ∈ d}|）
     </div>
     <div class="formula">
         tfidf(t, d) = TF(t, d) &times; IDF(t)
     </div>
     <p>
-        ここで、N は全文書数、df(t) は単語 t を含む文書数である。
-        ユニグラムとバイグラムの両方を特徴量とし（ngram_range=(1,2)）、最大特徴数は10,000とした。
+        ここで N = |D| は全文書数、df(t) は語 t を含む文書数（文書頻度）である。
+        サブリニアTFスケーリングにより、高頻度語の影響が対数的に抑制される。
+        各文書 d は語彙集合 V = {t<sub>1</sub>, ..., t<sub>|V|</sub>} 上のベクトル
+        <strong>v</strong><sub>d</sub> = (tfidf(t<sub>1</sub>, d), ..., tfidf(t<sub>|V|</sub>, d))
+        ∈ ℝ<sup>|V|</sup> として表現される。
+        類似度計算に先立ち L2正規化を適用する。
     </p>
+    <div class="formula">
+        <strong>v̂</strong><sub>d</sub> = <strong>v</strong><sub>d</sub> / ‖<strong>v</strong><sub>d</sub>‖<sub>2</sub>
+        &nbsp;&nbsp;（‖<strong>v</strong>‖<sub>2</sub> = √(Σ<sub>i</sub> v<sub>i</sub><sup>2</sup>)）
+    </div>
     <p>
-        潜在意味解析（LSA）<sup>[8]</sup>による次元削減も併せて評価した。
-        Dumais (2004)<sup>[8]</sup>が包括的にレビューしたように、LSAでは切断特異値分解により
-        TF-IDF行列を低次元の密行列に射影する。
+        L2正規化により各文書ベクトルが単位超球面 S<sup>|V|−1</sup> 上に射影され、
+        文書長の影響が除去される。
+        ユニグラムとバイグラムの両方を特徴量とし（ngram_range=(1,2)）、最大特徴数は10,000とした。
+        特徴量空間の次元を |V'| ≤ 10,000 に制限することで計算効率と過学習抑制を図る。
+    </p>
+
+    <h4>3.4.1.1 潜在意味解析（LSA）による次元削減</h4>
+    <p>
+        Dumais (2004)<sup>[8]</sup>が包括的にレビューした LSA（Latent Semantic Analysis）による
+        次元削減も併せて評価した。
+        TF-IDF行列を A ∈ ℝ<sup>N×|V'|</sup>（N: 文書数、|V'|: 特徴語数）とし、
+        切断特異値分解（Truncated SVD）を適用する。
+    </p>
+    <div class="formula">
+        A ≈ U<sub>k</sub> Σ<sub>k</sub> V<sub>k</sub><sup>T</sup>
+    </div>
+    <p>
+        ここで U<sub>k</sub> ∈ ℝ<sup>N×k</sup> は左特異ベクトル行列、
+        Σ<sub>k</sub> ∈ ℝ<sup>k×k</sup> は上位 k 個の特異値からなる対角行列、
+        V<sub>k</sub> ∈ ℝ<sup>|V'|×k</sup> は右特異ベクトル行列であり、
+        Eckart-Young-Mirsky の定理により、この近似はフロベニウスノルム ‖A − U<sub>k</sub>Σ<sub>k</sub>V<sub>k</sub><sup>T</sup>‖<sub>F</sub>
+        を最小化する最良ランク k 近似である。
+        低次元表現 A<sub>k</sub> = U<sub>k</sub>Σ<sub>k</sub> ∈ ℝ<sup>N×k</sup> により、
+        同義語・多義語の問題が潜在意味空間への射影を通じて軽減される。
     </p>
 
     <h4>3.4.2 Doc2Vec</h4>
     <p>
-        Doc2Vec（Paragraph Vector）はLe &amp; Mikolov (2014)<sup>[3]</sup>による文書レベルの分散表現学習手法である。
-        PV-DBOW（dm=0、単語順序を無視）とPV-DM（dm=1、単語位置情報を活用）の2つのアーキテクチャを評価した。
+        Doc2Vec（Paragraph Vector）は Le &amp; Mikolov (2014)<sup>[3]</sup>による文書レベルの分散表現学習手法である。
+        文書 d に対するベクトル <strong>p</strong><sub>d</sub> ∈ ℝ<sup>m</sup>（m = 200）を学習する。
+        本評価では2つのアーキテクチャを評価した。
+    </p>
+    <p>
+        <strong>PV-DBOW</strong>（dm=0）: 文書ベクトル <strong>p</strong><sub>d</sub> のみから文書内の単語 w<sub>t</sub> を予測するモデルである。
+        目的関数は文書 d に含まれる全単語に対する対数尤度の最大化として定義される。
+    </p>
+    <div class="formula">
+        L<sub>DBOW</sub> = Σ<sub>d∈D</sub> Σ<sub>w<sub>t</sub>∈d</sub> log P(w<sub>t</sub> | <strong>p</strong><sub>d</sub>)
+    </div>
+    <p>
+        <strong>PV-DM</strong>（dm=1）: 文書ベクトル <strong>p</strong><sub>d</sub> と文脈語ベクトル
+        {<strong>u</strong><sub>w<sub>t-c</sub></sub>, ..., <strong>u</strong><sub>w<sub>t+c</sub></sub>} の結合または平均から
+        中心語 w<sub>t</sub> を予測するモデルである。
+    </p>
+    <div class="formula">
+        L<sub>DM</sub> = Σ<sub>d∈D</sub> Σ<sub>t</sub> log P(w<sub>t</sub> | <strong>p</strong><sub>d</sub>, <strong>u</strong><sub>w<sub>t-c</sub></sub>, ..., <strong>u</strong><sub>w<sub>t+c</sub></sub>)
+    </div>
+    <p>
+        両モデルにおいて P(w<sub>t</sub> | ·) はソフトマックス関数で定義されるが、
+        語彙サイズが大きい場合の計算効率のため負例サンプリング（negative sampling）で近似する。
+        負例サンプリングでは、目的関数を以下に置換する（k: 負例サンプル数）。
+    </p>
+    <div class="formula">
+        log σ(<strong>v'</strong><sub>w<sub>t</sub></sub><sup>T</sup> <strong>h</strong>) +
+        Σ<sub>i=1</sub><sup>k</sup> 𝔼<sub>w<sub>i</sub>~P<sub>n</sub></sub>[log σ(−<strong>v'</strong><sub>w<sub>i</sub></sub><sup>T</sup> <strong>h</strong>)]
+    </div>
+    <p>
+        ここで σ(x) = 1/(1 + e<sup>−x</sup>) はシグモイド関数、<strong>h</strong> は入力の隠れ層出力、
+        P<sub>n</sub>(w) はノイズ分布（ユニグラム分布の3/4乗）である。
         いずれも200次元のベクトルを生成し、100エポックの学習を行った。
     </p>
 
     <h4>3.4.3 Word2Vec + 平均プーリング</h4>
     <p>
-        Word2Vec (Mikolov et al., 2013)<sup>[2]</sup>で学習した100次元の単語ベクトルを、
-        文書内の全単語について平均プーリングにより集約し、文書ベクトルとした。
+        Word2Vec (Mikolov et al., 2013)<sup>[2]</sup>で学習した単語ベクトル <strong>e</strong><sub>w</sub> ∈ ℝ<sup>m</sup>（m = 100）を用いる。
+        Skip-gramモデルの目的関数は、中心語 w<sub>t</sub> の周囲の文脈語 w<sub>t+j</sub>（|j| ≤ c, j ≠ 0）の予測確率の対数尤度として定義される。
+    </p>
+    <div class="formula">
+        L<sub>SG</sub> = (1/T) Σ<sub>t=1</sub><sup>T</sup> Σ<sub>−c≤j≤c, j≠0</sub> log P(w<sub>t+j</sub> | w<sub>t</sub>)
+    </div>
+    <p>
+        文書 d に含まれる n<sub>d</sub> 個の単語 {w<sub>1</sub>, ..., w<sub>n<sub>d</sub></sub>} に対し、
+        文書ベクトル <strong>d</strong> を平均プーリング（mean pooling）で定義する。
+    </p>
+    <div class="formula">
+        <strong>d</strong> = (1/n<sub>d</sub>) Σ<sub>i=1</sub><sup>n<sub>d</sub></sup> <strong>e</strong><sub>w<sub>i</sub></sub> ∈ ℝ<sup>m</sup>
+    </div>
+    <p>
+        平均プーリングは単語ベクトルの重心に対応し、各単語に等しい重みを与える。
+        TF-IDF重みによる加重平均 <strong>d</strong><sub>w</sub> = Σ<sub>i</sub> tfidf(w<sub>i</sub>, d)·<strong>e</strong><sub>w<sub>i</sub></sub> / Σ<sub>i</sub> tfidf(w<sub>i</sub>, d) も考えられるが、
+        本評価では単純平均を採用した。
     </p>
 
     <h3>3.5 類似度計算と多重クエリ戦略</h3>
 
     <h4>3.5.1 コサイン類似度</h4>
     <p>
-        2つのベクトル <em>a</em>, <em>b</em> 間のコサイン類似度は以下で定義される。
+        ベクトル空間 ℝ<sup>m</sup> における2つのベクトル <strong>a</strong>, <strong>b</strong> ∈ ℝ<sup>m</sup> 間のコサイン類似度は、
+        内積とL2ノルムの比として以下で定義される。
     </p>
     <div class="formula">
-        sim(a, b) = (a &middot; b) / (||a|| &times; ||b||)
+        cos(<strong>a</strong>, <strong>b</strong>) = (<strong>a</strong> · <strong>b</strong>) / (‖<strong>a</strong>‖<sub>2</sub> · ‖<strong>b</strong>‖<sub>2</sub>)
+        = Σ<sub>i=1</sub><sup>m</sup> a<sub>i</sub>b<sub>i</sub> / (√(Σ<sub>i</sub>a<sub>i</sub><sup>2</sup>) · √(Σ<sub>i</sub>b<sub>i</sub><sup>2</sup>))
     </div>
     <p>
-        値域は [0, 1]（非負ベクトルの場合）であり、1に近いほど類似度が高い。
+        一般に値域は [−1, 1] であるが、TF-IDFベクトル等の非負ベクトル（<strong>a</strong>, <strong>b</strong> ∈ ℝ<sub>≥0</sub><sup>m</sup>）
+        の場合は [0, 1] となる。
+        幾何学的には、コサイン類似度は2つのベクトルがなす角 θ の余弦値 cos θ に等しく、
+        θ → 0 で類似度は最大値1に収束する。
     </p>
+    <p>
+        コサイン類似度の重要な性質として以下が挙げられる。
+    </p>
+    <ul>
+        <li><strong>スケール不変性：</strong>任意の正の定数 α, β &gt; 0 に対し cos(α<strong>a</strong>, β<strong>b</strong>) = cos(<strong>a</strong>, <strong>b</strong>)。
+            文書長の影響が自動的に正規化される。</li>
+        <li><strong>L2正規化との関係：</strong>事前に L2正規化された単位ベクトル <strong>â</strong>, <strong>b̂</strong> に対し、
+            cos(<strong>â</strong>, <strong>b̂</strong>) = <strong>â</strong> · <strong>b̂</strong> となり、内積の計算のみで求まる。</li>
+        <li><strong>ユークリッド距離との関係：</strong>単位ベクトル間では ‖<strong>â</strong> − <strong>b̂</strong>‖<sub>2</sub><sup>2</sup> = 2(1 − cos(<strong>â</strong>, <strong>b̂</strong>))
+            が成立し、コサイン類似度の最大化はユークリッド距離の最小化と等価となる。</li>
+    </ul>
 
     <h4>3.5.2 多重クエリ集約戦略</h4>
     <p>
-        複数の自社特許を同時にクエリとして使用する場合の、
-        類似度スコアの集約方法として3つの既存戦略を比較した（表2）。
+        自社特許クエリ集合 Q = {<strong>q</strong><sub>1</sub>, ..., <strong>q</strong><sub>n</sub>} ⊂ ℝ<sup>m</sup>（n = |Q|）と
+        候補特許ベクトル <strong>c</strong> ∈ ℝ<sup>m</sup> に対し、
+        集約スコア f(Q, <strong>c</strong>) ∈ [0, 1] を計算する3つの既存戦略を比較した（表2）。
     </p>
 
     <table>
         <caption>表2：多重クエリ集約戦略</caption>
         <thead>
-            <tr><th>戦略</th><th>計算式</th><th>特徴</th></tr>
+            <tr><th>戦略</th><th>数学的定義</th><th>特徴</th></tr>
         </thead>
         <tbody>
             <tr>
                 <td>最大スコア</td>
-                <td>score = max<sub>i</sub> sim(q<sub>i</sub>, c)</td>
-                <td>いずれかの自社特許との類似が高ければ検出。リスク回避型。</td>
+                <td>f<sub>max</sub>(Q, <strong>c</strong>) = max<sub>i∈{1,...,n}</sub> cos(<strong>q</strong><sub>i</sub>, <strong>c</strong>)</td>
+                <td>L<sup>∞</sup>的集約。いずれかのクエリとの高類似で検出。リスク回避型。</td>
             </tr>
             <tr>
                 <td>平均スコア</td>
-                <td>score = mean<sub>i</sub> sim(q<sub>i</sub>, c)</td>
-                <td>ポートフォリオ全体との平均的な類似度。</td>
+                <td>f<sub>avg</sub>(Q, <strong>c</strong>) = (1/n) Σ<sub>i=1</sub><sup>n</sup> cos(<strong>q</strong><sub>i</sub>, <strong>c</strong>)</td>
+                <td>L<sup>1</sup>的集約。ポートフォリオ全体との平均的類似度。</td>
             </tr>
             <tr>
                 <td>結合ベクトル</td>
-                <td>q&#x0304; = mean(q<sub>i</sub>), score = sim(q&#x0304;, c)</td>
-                <td>自社特許群の重心ベクトルとの類似度。</td>
+                <td><strong>q̄</strong> = (1/n) Σ<sub>i=1</sub><sup>n</sup> <strong>q</strong><sub>i</sub>,&nbsp;
+                    f<sub>cen</sub>(Q, <strong>c</strong>) = cos(<strong>q̄</strong>, <strong>c</strong>)</td>
+                <td>クエリ群の重心（centroid）との類似度。コンパクトな代表表現。</td>
             </tr>
         </tbody>
     </table>
+    <p>
+        一般に f<sub>max</sub> ≥ f<sub>avg</sub> が成立する（コサイン類似度が非負の場合）。
+        f<sub>cen</sub> は重心ベクトルの方向がクエリ分布のバイアスを反映するため、
+        クエリ間の分散が大きい場合に f<sub>avg</sub> とは異なるランキングを生成しうる。
+    </p>
 
     <h4>3.5.3 請求項の構成要素分析</h4>
     <p>
@@ -366,9 +475,11 @@
 
     <h3>3.6 機械学習分類器</h3>
     <p>
-        ベクトル化された特許文書の特徴ベクトルに対して、教師あり学習による二値分類
-        （関連=1 / 無関連=0）を適用した。表3に示す11種のアルゴリズムはいずれもscikit-learn<sup>[10]</sup>で
-        提供される既存の実装をデフォルトに近いパラメータで使用した。
+        ベクトル化された特許文書の特徴ベクトル <strong>x</strong> ∈ ℝ<sup>m</sup> に対して、
+        教師あり学習による二値分類（y ∈ {0, 1}、関連=1 / 無関連=0）を適用した。
+        学習データ {(<strong>x</strong><sub>i</sub>, y<sub>i</sub>)}<sub>i=1</sub><sup>n</sup> から
+        写像 f: ℝ<sup>m</sup> → {0, 1} を学習する。
+        表3に示す11種のアルゴリズムはいずれもscikit-learn<sup>[10]</sup>で提供される既存の実装を使用した。
     </p>
 
     <table>
@@ -377,23 +488,112 @@
             <tr><th>分類器</th><th>手法概要</th><th>主要パラメータ</th></tr>
         </thead>
         <tbody>
-            <tr><td>ランダムフォレスト</td><td>バギングによる決定木のアンサンブル</td><td>n_estimators=100</td></tr>
-            <tr><td>エイダブースト</td><td>適応的ブースティング</td><td>n_estimators=100</td></tr>
-            <tr><td>勾配ブースティング</td><td>勾配降下法によるブースティング</td><td>n_estimators=100</td></tr>
-            <tr><td>SVM（RBFカーネル）</td><td>ガウシアンカーネルによる非線形SVM</td><td>kernel='rbf'</td></tr>
-            <tr><td>SVM（線形カーネル）</td><td>線形カーネルによるSVM</td><td>kernel='linear'</td></tr>
-            <tr><td>ロジスティック回帰</td><td>線形確率モデル</td><td>max_iter=1000</td></tr>
-            <tr><td>ニューラルネット (MLP)</td><td>多層パーセプトロン</td><td>hidden=(300,100)</td></tr>
-            <tr><td>バギング</td><td>ブートストラップ集約</td><td>n_estimators=10</td></tr>
-            <tr><td>k近傍法</td><td>k最近傍による多数決</td><td>k=7</td></tr>
-            <tr><td>ナイーブベイズ</td><td>ガウシアンナイーブベイズ</td><td>-</td></tr>
-            <tr><td>決定木</td><td>単一決定木（CART）</td><td>デフォルト</td></tr>
+            <tr><td>ランダムフォレスト</td><td>バギング＋特徴量ランダム選択による決定木アンサンブル</td><td>n_estimators=100</td></tr>
+            <tr><td>エイダブースト</td><td>指数損失の逐次最小化による適応的ブースティング</td><td>n_estimators=100</td></tr>
+            <tr><td>勾配ブースティング</td><td>損失関数の負勾配への逐次フィッティング</td><td>n_estimators=100</td></tr>
+            <tr><td>SVM（RBFカーネル）</td><td>ガウシアンカーネル K(<strong>x</strong>,<strong>x'</strong>) = exp(−γ‖<strong>x</strong>−<strong>x'</strong>‖²)</td><td>kernel='rbf'</td></tr>
+            <tr><td>SVM（線形カーネル）</td><td>K(<strong>x</strong>,<strong>x'</strong>) = <strong>x</strong><sup>T</sup><strong>x'</strong> によるマージン最大化</td><td>kernel='linear'</td></tr>
+            <tr><td>ロジスティック回帰</td><td>シグモイド関数 σ(<strong>w</strong><sup>T</sup><strong>x</strong>+b) による確率推定</td><td>max_iter=1000</td></tr>
+            <tr><td>ニューラルネット (MLP)</td><td>多層パーセプトロン（ReLU活性化関数）</td><td>hidden=(300,100)</td></tr>
+            <tr><td>バギング</td><td>ブートストラップ集約によるアンサンブル</td><td>n_estimators=10</td></tr>
+            <tr><td>k近傍法</td><td>特徴空間上のk最近傍による多数決</td><td>k=7</td></tr>
+            <tr><td>ナイーブベイズ</td><td>P(y|<strong>x</strong>) ∝ P(y)∏P(x<sub>j</sub>|y) の独立性仮定</td><td>-</td></tr>
+            <tr><td>決定木</td><td>ジニ不純度 G = 1−Σp<sub>k</sub>² に基づくCART分割</td><td>デフォルト</td></tr>
         </tbody>
     </table>
+
+    <h4>3.6.1 主要分類器の数学的定式化</h4>
     <p>
-        評価指標として、Precision、Recall、F1スコア、AUC-ROCを使用した。
-        交差検証にはStratified K-Fold（k=5）を採用し、クラス比率を保持した分割を行った。
+        <strong>SVM（サポートベクターマシン）：</strong>
+        学習データ {(<strong>x</strong><sub>i</sub>, y<sub>i</sub>)} に対し、ヒンジ損失と正則化項の和を最小化する。
+        ラベルを ỹ<sub>i</sub> ∈ {−1, +1} と再定義すると、ソフトマージンSVMの最適化問題は以下で与えられる。
     </p>
+    <div class="formula">
+        min<sub><strong>w</strong>,b,ξ</sub> (1/2)‖<strong>w</strong>‖<sup>2</sup> + C Σ<sub>i=1</sub><sup>n</sup> ξ<sub>i</sub>
+        &nbsp;&nbsp; s.t. &nbsp; ỹ<sub>i</sub>(<strong>w</strong><sup>T</sup>φ(<strong>x</strong><sub>i</sub>) + b) ≥ 1 − ξ<sub>i</sub>, &nbsp; ξ<sub>i</sub> ≥ 0
+    </div>
+    <p>
+        ここで φ: ℝ<sup>m</sup> → ℋ はカーネル関数 K(<strong>x</strong>, <strong>x'</strong>) = ⟨φ(<strong>x</strong>), φ(<strong>x'</strong>)⟩<sub>ℋ</sub> に対応する
+        特徴写像、C &gt; 0 は正則化パラメータ、ξ<sub>i</sub> はスラック変数である。
+        双対問題の解により、決定関数は f(<strong>x</strong>) = sign(Σ<sub>i</sub> α<sub>i</sub>ỹ<sub>i</sub>K(<strong>x</strong><sub>i</sub>, <strong>x</strong>) + b) と表され、
+        カーネルトリックにより高次元特徴空間での明示的な計算を回避する。
+    </p>
+    <p>
+        <strong>ロジスティック回帰：</strong>
+        入力 <strong>x</strong> に対する陽性確率を P(y=1|<strong>x</strong>) = σ(<strong>w</strong><sup>T</sup><strong>x</strong> + b)
+        （σ(z) = 1/(1 + e<sup>−z</sup>)）とモデル化し、交差エントロピー損失（負の対数尤度）を最小化する。
+    </p>
+    <div class="formula">
+        L(<strong>w</strong>, b) = −(1/n) Σ<sub>i=1</sub><sup>n</sup> [y<sub>i</sub> log ŷ<sub>i</sub> + (1−y<sub>i</sub>) log(1−ŷ<sub>i</sub>)]
+        + (λ/2)‖<strong>w</strong>‖<sup>2</sup>
+    </div>
+    <p>
+        ここで ŷ<sub>i</sub> = σ(<strong>w</strong><sup>T</sup><strong>x</strong><sub>i</sub> + b)、λ は L2正則化係数である。
+    </p>
+    <p>
+        <strong>勾配ブースティング：</strong>
+        初期予測 F<sub>0</sub>(<strong>x</strong>) = argmin<sub>γ</sub> Σ<sub>i</sub> L(y<sub>i</sub>, γ) から開始し、
+        各イテレーション t = 1, ..., T で擬似残差（損失関数の負勾配）に弱学習器 h<sub>t</sub> をフィッティングする。
+    </p>
+    <div class="formula">
+        r<sub>it</sub> = −[∂L(y<sub>i</sub>, F(<strong>x</strong><sub>i</sub>)) / ∂F(<strong>x</strong><sub>i</sub>)]<sub>F=F<sub>t-1</sub></sub>
+    </div>
+    <div class="formula">
+        F<sub>t</sub>(<strong>x</strong>) = F<sub>t−1</sub>(<strong>x</strong>) + η · h<sub>t</sub>(<strong>x</strong>)
+    </div>
+    <p>
+        ここで η ∈ (0, 1] は学習率（shrinkage parameter）であり、過学習を抑制する。
+        二値分類では対数損失 L(y, F) = −[y log σ(F) + (1−y) log(1−σ(F))] を用いる。
+    </p>
+    <p>
+        <strong>ランダムフォレスト：</strong>
+        B 本の決定木 {h<sub>b</sub>}<sub>b=1</sub><sup>B</sup> のアンサンブルであり、
+        各木はブートストラップサンプル D<sub>b</sub><sup>*</sup> ⊂ D で学習される。
+        各分割ノードで全 m 特徴量のうち √m 個をランダムに選択し、
+        ジニ不純度 G(S) = 1 − Σ<sub>k∈{0,1}</sub> p̂<sub>k</sub><sup>2</sup>
+        （p̂<sub>k</sub>: ノード内のクラス k の比率）の減少が最大となる分割を選択する。
+        最終予測は多数決 ŷ = mode({h<sub>b</sub>(<strong>x</strong>)}<sub>b=1</sub><sup>B</sup>) で行う。
+    </p>
+
+    <h4>3.6.2 評価指標の定義</h4>
+    <p>
+        混同行列の各要素を TP（真陽性）, FP（偽陽性）, FN（偽陰性）, TN（真陰性）とする。
+    </p>
+    <div class="formula">
+        Precision = TP / (TP + FP), &nbsp;&nbsp;
+        Recall = TP / (TP + FN)
+    </div>
+    <div class="formula">
+        F1 = 2 · Precision · Recall / (Precision + Recall) = 2TP / (2TP + FP + FN)
+    </div>
+    <p>
+        F1スコアは Precision と Recall の調和平均であり、算術平均と異なり両指標がともに高い場合にのみ高値を示す
+        （AM ≥ HM の不等式による）。
+    </p>
+    <p>
+        AUC-ROC は閾値 τ ∈ [0, 1] を走査した際の真陽性率 TPR(τ) = TP/(TP+FN) と
+        偽陽性率 FPR(τ) = FP/(FP+TN) のパラメトリック曲線 {(FPR(τ), TPR(τ))} の下側面積として定義される。
+    </p>
+    <div class="formula">
+        AUC = ∫<sub>0</sub><sup>1</sup> TPR(FPR<sup>−1</sup>(x)) dx
+    </div>
+    <p>
+        確率的解釈として、AUC はランダムに選んだ陽性サンプルのスコアがランダムに選んだ陰性サンプルのスコアを
+        上回る確率 P(s<sub>+</sub> &gt; s<sub>−</sub>) に等しい（Mann-Whitney U統計量との等価性）。
+    </p>
+
+    <h4>3.6.3 交差検証</h4>
+    <p>
+        Stratified K-Fold 交差検証（K=5）を採用した。
+        データ D を K 個の互いに素な部分集合 D = D<sub>1</sub> ⊔ ... ⊔ D<sub>K</sub>
+        （各 D<sub>k</sub> のクラス比率が D と同一）に分割し、
+        各フォールド k ∈ {1, ..., K} で D \ D<sub>k</sub> を学習データ、D<sub>k</sub> をテストデータとして
+        評価指標 M<sub>k</sub> を算出する。最終評価は平均と標準偏差で報告する。
+    </p>
+    <div class="formula">
+        M̄ = (1/K) Σ<sub>k=1</sub><sup>K</sup> M<sub>k</sub>, &nbsp;&nbsp;
+        s = √((1/(K−1)) Σ<sub>k=1</sub><sup>K</sup> (M<sub>k</sub> − M̄)<sup>2</sup>)
+    </div>
 
     <!-- 4. Implementation -->
     <h2>4. システム実装</h2>

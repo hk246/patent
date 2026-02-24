@@ -654,10 +654,14 @@
                     </svg>
                 </div>
                 <p class="desc">Janome形態素解析器で日本語をトークンに分割し、名詞（一般名詞）のみを抽出。基本形に正規化し63語のストップワードを除去。セクション別に重み付けを適用します。</p>
+                <div class="callout-sm" style="font-size:10px;margin-top:6px;">
+                    <strong>重み付き文書表現：</strong>T(d) = ⨁<sub>s∈S</sub> tokens(d,s)<sup>⊕w<sub>s</sub></sup><br>
+                    重み付き後の出現回数: count'(t,d) = Σ<sub>s</sub> w<sub>s</sub> · count(t,d,s)
+                </div>
             </div>
             <div>
                 <div style="font-size:13px; font-weight:700; color:#302b63; margin-bottom:10px;">📊 セクション重み付け</div>
-                <p class="desc">特許文書のセクションごとに重要度を設定。法的保護範囲を規定する<strong>請求項</strong>に最大の重みを付与します。</p>
+                <p class="desc">特許文書のセクション S = {claims, title, abstract, desc} に重み w<sub>s</sub> を設定。法的保護範囲を規定する<strong>請求項</strong>に最大の重みを付与。</p>
                 <div class="weight-bars">
                     <div class="weight-row">
                         <div class="weight-label">⚖️ 請求項</div>
@@ -692,7 +696,7 @@
             <div class="sh-title">テキストベクトル化</div>
             <div class="sh-line"></div>
         </div>
-        <p class="desc">人間が読む「文章」をコンピュータが計算できる「数値の列（ベクトル）」に変換。3つの手法から最適なものを選択。</p>
+        <p class="desc">文書 d をベクトル <strong>v</strong><sub>d</sub> ∈ ℝ<sup>m</sup> に写像する。L2正規化後 <strong>v̂</strong><sub>d</sub> = <strong>v</strong><sub>d</sub>/‖<strong>v</strong><sub>d</sub>‖₂ により単位超球面 S<sup>m−1</sup> 上へ射影。</p>
 
         <div class="diagram-box" style="margin-bottom:14px;">
             <div class="diagram-title">ベクトル化のイメージ</div>
@@ -716,33 +720,37 @@
             <div class="compare-card c1">
                 <div class="compare-icon">📊</div>
                 <div class="compare-name">TF-IDF</div>
-                <div class="compare-type">スパース（高次元）</div>
+                <div class="compare-type"><strong>v</strong><sub>d</sub> ∈ ℝ<sup>|V|</sup>（スパース）</div>
                 <div class="compare-desc">
-                    単語の出現頻度×希少性で重み付け。解釈性が高い。LSA次元削減と併用可能。最もシンプルな手法。
+                    tfidf(t,d) = (1+log count(t,d)) × (log(N/df(t))+1)<br>
+                    LSA: A ≈ U<sub>k</sub>Σ<sub>k</sub>V<sub>k</sub><sup>T</sup> で次元 k に削減
                 </div>
             </div>
             <div class="compare-card c2">
                 <div class="compare-icon">🧬</div>
                 <div class="compare-name">Doc2Vec</div>
-                <div class="compare-type">密ベクトル（200次元）</div>
+                <div class="compare-type"><strong>p</strong><sub>d</sub> ∈ ℝ<sup>200</sup>（密）</div>
                 <div class="compare-desc">
-                    文書全体を一つのベクトルで表現。文脈的な意味関係を学習し、言い換えや類義語にも対応。
+                    PV-DBOW: L = Σ<sub>d</sub>Σ<sub>w∈d</sub> log P(w|<strong>p</strong><sub>d</sub>)<br>
+                    負例サンプリングで効率的に最適化
                 </div>
             </div>
             <div class="compare-card c3">
                 <div class="compare-icon">💬</div>
                 <div class="compare-name">Word2Vec + 平均</div>
-                <div class="compare-type">密ベクトル（100次元）</div>
+                <div class="compare-type"><strong>d</strong> ∈ ℝ<sup>100</sup>（密）</div>
                 <div class="compare-desc">
-                    各単語ベクトルの平均で文書ベクトルを生成。計算が軽量で少量データでも安定。
+                    <strong>d</strong> = (1/n) Σ<sub>i</sub> <strong>e</strong><sub>w<sub>i</sub></sub><br>
+                    （平均プーリング = 重心ベクトル）
                 </div>
             </div>
         </div>
 
         <div class="callout-sm">
-            <strong>💡 TF-IDF式：</strong>
-            <span style="font-style:italic; color:#667eea;">TF(t,d) = 1+log(count(t,d)) | IDF(t) = log(N/df(t))+1 | tfidf = TF×IDF</span>
-            — 多くの文書に出る一般語は低重み、専門用語は高重み
+            <strong>💡 LSA (Eckart-Young-Mirsky)：</strong>
+            切断SVD A ≈ U<sub>k</sub>Σ<sub>k</sub>V<sub>k</sub><sup>T</sup> は
+            ‖A − X‖<sub>F</sub> を最小化する最良ランク k 近似。
+            低次元 A<sub>k</sub> = U<sub>k</sub>Σ<sub>k</sub> ∈ ℝ<sup>N×k</sup> で同義語・多義語問題を軽減。
         </div>
     </div>
     <div class="slide-page">7 / 10</div>
@@ -761,8 +769,12 @@
 
         <div class="two-col" style="flex:1;">
             <div>
-                <div style="font-size:13px; font-weight:700; color:#302b63; margin-bottom:6px;">🔍 コサイン類似度とは？</div>
-                <p class="desc">2つのベクトルの「向いている方向の近さ」で類似性を測定。0〜1の値で、1に近いほど類似。文書長に影響されない堅牢な指標。</p>
+                <div style="font-size:13px; font-weight:700; color:#302b63; margin-bottom:6px;">🔍 コサイン類似度</div>
+                <p class="desc"><strong>a</strong>,<strong>b</strong> ∈ ℝ<sup>m</sup> に対し cos(<strong>a</strong>,<strong>b</strong>) = Σa<sub>i</sub>b<sub>i</sub> / (‖<strong>a</strong>‖₂·‖<strong>b</strong>‖₂)。非負ベクトルで値域[0,1]。</p>
+                <div class="callout-sm" style="font-size:9px;margin-bottom:6px;padding:6px 10px;">
+                    <strong>性質：</strong>スケール不変 cos(α<strong>a</strong>,β<strong>b</strong>)=cos(<strong>a</strong>,<strong>b</strong>) |
+                    単位ベクトル間: ‖<strong>â</strong>−<strong>b̂</strong>‖²=2(1−cos(<strong>â</strong>,<strong>b̂</strong>))
+                </div>
 
                 <div class="diagram-box">
                     <svg width="100%" height="180" viewBox="0 0 420 180" preserveAspectRatio="xMidYMid meet">
@@ -795,27 +807,27 @@
                 </div>
             </div>
             <div>
-                <div style="font-size:13px; font-weight:700; color:#302b63; margin-bottom:6px;">📐 多重クエリ集約戦略</div>
-                <p class="desc">自社特許が複数ある場合の、スコア集約方法を3種類から選択可能。</p>
+                <div style="font-size:13px; font-weight:700; color:#302b63; margin-bottom:6px;">📐 多重クエリ集約 Q={<strong>q</strong>₁,...,<strong>q</strong><sub>n</sub>}</div>
+                <p class="desc">クエリ集合 Q ⊂ ℝ<sup>m</sup> と候補 <strong>c</strong> ∈ ℝ<sup>m</sup> のスコア集約。</p>
 
                 <div class="strat-grid" style="grid-template-columns:1fr;">
                     <div class="strat-card">
                         <div class="strat-icon">🔺</div>
-                        <div class="strat-name">最大スコア</div>
-                        <div class="strat-formula">max sim(qᵢ, c)</div>
-                        <div class="strat-desc">いずれかの自社特許との類似が高ければ検出。リスク回避型。</div>
+                        <div class="strat-name">最大スコア（L<sup>∞</sup>的）</div>
+                        <div class="strat-formula">f<sub>max</sub> = max<sub>i∈{1..n}</sub> cos(<strong>q</strong><sub>i</sub>, <strong>c</strong>)</div>
+                        <div class="strat-desc">リスク回避型。f<sub>max</sub> ≥ f<sub>avg</sub> が常に成立。</div>
                     </div>
                     <div class="strat-card">
                         <div class="strat-icon">📊</div>
-                        <div class="strat-name">平均スコア</div>
-                        <div class="strat-formula">mean sim(qᵢ, c)</div>
-                        <div class="strat-desc">ポートフォリオ全体との平均的類似度。バランス型。</div>
+                        <div class="strat-name">平均スコア（L<sup>1</sup>的）</div>
+                        <div class="strat-formula">f<sub>avg</sub> = (1/n) Σ<sub>i</sub> cos(<strong>q</strong><sub>i</sub>, <strong>c</strong>)</div>
+                        <div class="strat-desc">バランス型。ポートフォリオ全体との平均。</div>
                     </div>
                     <div class="strat-card">
                         <div class="strat-icon">🔗</div>
-                        <div class="strat-name">結合ベクトル</div>
-                        <div class="strat-formula">sim(mean(qᵢ), c)</div>
-                        <div class="strat-desc">自社特許群の重心との類似度。全体傾向を把握。</div>
+                        <div class="strat-name">重心ベクトル（Centroid）</div>
+                        <div class="strat-formula"><strong>q̄</strong>=(1/n)Σ<strong>q</strong><sub>i</sub>, f<sub>cen</sub>=cos(<strong>q̄</strong>,<strong>c</strong>)</div>
+                        <div class="strat-desc">クエリ群の重心方向との類似度。</div>
                     </div>
                 </div>
             </div>
@@ -870,21 +882,21 @@
             </svg>
         </div>
 
-        <div style="font-size:12px; font-weight:700; color:#302b63; margin-bottom:8px;">🧠 搭載アルゴリズム（11種）</div>
+        <div style="font-size:12px; font-weight:700; color:#302b63; margin-bottom:8px;">🧠 搭載アルゴリズム（11種） — 写像 f: ℝ<sup>m</sup> → {0,1} を学習</div>
         <div class="ml-grid">
-            <div class="ml-card featured"><div class="ml-icon">🌲</div><div class="ml-name">ランダムフォレスト</div><div class="ml-desc">決定木アンサンブル</div></div>
-            <div class="ml-card featured"><div class="ml-icon">⚡</div><div class="ml-name">エイダブースト</div><div class="ml-desc">適応的ブースティング</div></div>
-            <div class="ml-card featured"><div class="ml-icon">📈</div><div class="ml-name">勾配ブースティング</div><div class="ml-desc">勾配降下法</div></div>
-            <div class="ml-card"><div class="ml-icon">🔲</div><div class="ml-name">SVM (RBF)</div><div class="ml-desc">マージン最大化</div></div>
-            <div class="ml-card"><div class="ml-icon">📏</div><div class="ml-name">SVM (線形)</div><div class="ml-desc">線形判別</div></div>
-            <div class="ml-card"><div class="ml-icon">📉</div><div class="ml-name">ロジスティック回帰</div><div class="ml-desc">確率線形</div></div>
-            <div class="ml-card"><div class="ml-icon">🧬</div><div class="ml-name">ニューラルネット</div><div class="ml-desc">MLP</div></div>
-            <div class="ml-card"><div class="ml-icon">🎒</div><div class="ml-name">バギング</div><div class="ml-desc">ブートストラップ</div></div>
-            <div class="ml-card"><div class="ml-icon">📍</div><div class="ml-name">k近傍法</div><div class="ml-desc">最近傍多数決</div></div>
-            <div class="ml-card"><div class="ml-icon">🎲</div><div class="ml-name">ナイーブベイズ</div><div class="ml-desc">ガウシアン</div></div>
-            <div class="ml-card"><div class="ml-icon">🌳</div><div class="ml-name">決定木</div><div class="ml-desc">単一CART</div></div>
+            <div class="ml-card featured"><div class="ml-icon">🌲</div><div class="ml-name">ランダムフォレスト</div><div class="ml-desc">G=1−Σp̂<sub>k</sub>²</div></div>
+            <div class="ml-card featured"><div class="ml-icon">⚡</div><div class="ml-name">エイダブースト</div><div class="ml-desc">指数損失最小化</div></div>
+            <div class="ml-card featured"><div class="ml-icon">📈</div><div class="ml-name">勾配ブースティング</div><div class="ml-desc">F<sub>t</sub>=F<sub>t-1</sub>+ηh<sub>t</sub></div></div>
+            <div class="ml-card"><div class="ml-icon">🔲</div><div class="ml-name">SVM (RBF)</div><div class="ml-desc">K=exp(−γ‖x−x'‖²)</div></div>
+            <div class="ml-card"><div class="ml-icon">📏</div><div class="ml-name">SVM (線形)</div><div class="ml-desc">min ½‖w‖²+CΣξ</div></div>
+            <div class="ml-card"><div class="ml-icon">📉</div><div class="ml-name">ロジスティック回帰</div><div class="ml-desc">σ(w<sup>T</sup>x+b)</div></div>
+            <div class="ml-card"><div class="ml-icon">🧬</div><div class="ml-name">ニューラルネット</div><div class="ml-desc">ReLU活性化</div></div>
+            <div class="ml-card"><div class="ml-icon">🎒</div><div class="ml-name">バギング</div><div class="ml-desc">Bootstrap集約</div></div>
+            <div class="ml-card"><div class="ml-icon">📍</div><div class="ml-name">k近傍法</div><div class="ml-desc">k=7, 多数決</div></div>
+            <div class="ml-card"><div class="ml-icon">🎲</div><div class="ml-name">ナイーブベイズ</div><div class="ml-desc">P(y|x)∝P(y)∏P(x<sub>j</sub>|y)</div></div>
+            <div class="ml-card"><div class="ml-icon">🌳</div><div class="ml-name">決定木</div><div class="ml-desc">CART分割</div></div>
             <div class="ml-card" style="border:none;background:transparent;display:flex;align-items:center;justify-content:center;">
-                <div style="font-size:9px;color:#888;text-align:center;"><strong style="color:#302b63;font-size:10px;">評価指標</strong><br>Precision / Recall<br>F1 / AUC-ROC / CV</div>
+                <div style="font-size:8px;color:#888;text-align:center;"><strong style="color:#302b63;font-size:9px;">評価</strong><br>F1=2PR/(P+R)<br>AUC=P(s₊>s₋)<br>CV: K=5</div>
             </div>
         </div>
     </div>
