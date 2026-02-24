@@ -327,40 +327,143 @@
                 <summary class="p-4 cursor-pointer text-sm font-medium text-gray-200 hover:text-gray-100 transition-colors">
                     Q. ベクトル化手法はどれを選べばよいですか？
                 </summary>
-                <div class="px-4 pb-4 text-sm text-gray-400">
-                    初めての場合は<strong class="text-gray-300">TF-IDF</strong>を推奨します。
-                    高速で安定した結果が得られます。
-                    同義語への対応を強化したい場合は TF-IDF + LSA を、
-                    大量の学習データがある場合は Doc2Vec も試す価値があります。
+                <div class="px-4 pb-4 text-sm text-gray-400 space-y-2">
+                    <p>
+                        初めての場合は<strong class="text-gray-300">TF-IDF</strong>を推奨します。
+                        高速で安定した結果が得られます。
+                        同義語への対応を強化したい場合は TF-IDF + LSA を、
+                        大量の学習データがある場合は Doc2Vec も試す価値があります。
+                    </p>
+                    <div class="mt-3 p-3 bg-gray-800/60 border border-gray-700/40 rounded-md text-xs text-gray-500">
+                        <p class="font-semibold text-gray-400 mb-1">📐 数学的根拠</p>
+                        <p>
+                            <strong class="text-gray-400">TF-IDF</strong> は文書 <em>d</em> 中の語 <em>t</em> に対し
+                            tfidf(<em>t,d</em>) = (1+log tf(<em>t,d</em>)) × log(<em>N</em>/df(<em>t</em>))
+                            でスパースベクトル <strong>v</strong><sub>d</sub> ∈ ℝ<sup>|V|</sup> を生成します。
+                            対数減衰（sublinear TF）により高頻度語の過大評価を抑え、IDF項が識別力の低い共通語を減衰させるため、
+                            追加学習なしで安定した文書表現が得られます（Salton &amp; Buckley, 1988）。
+                        </p>
+                        <p class="mt-1">
+                            <strong class="text-gray-400">LSA（潜在意味解析）</strong>は文書-単語行列 <em>A</em> に対し
+                            切断SVD: <em>A</em> ≈ <em>U<sub>k</sub>Σ<sub>k</sub>V<sub>k</sub><sup>T</sup></em> を適用し、
+                            次元を <em>k</em> に削減します。Eckart-Young-Mirsky の定理により、これはフロベニウスノルムの意味で最良のランク <em>k</em> 近似であり、
+                            同義語・多義語の関係が潜在空間に吸収されます（Deerwester et al., 1990）。
+                        </p>
+                        <p class="mt-1">
+                            <strong class="text-gray-400">Doc2Vec</strong> は文書ベクトル <strong>p</strong><sub>d</sub> を
+                            文脈語の予測確率 Σ log P(<em>w<sub>t</sub></em> | <strong>p</strong><sub>d</sub>) を最大化するように学習します（Le &amp; Mikolov, 2014）。
+                            密なベクトル <strong>p</strong><sub>d</sub> ∈ ℝ<sup>m</sup> は語順情報も捕捉できますが、
+                            十分なコーパスサイズがないとパラメータの推定精度が低下するため、大量データ時に有効です。
+                        </p>
+                    </div>
                 </div>
             </details>
             <details class="bg-gray-900 border border-gray-700/50 rounded-lg group">
                 <summary class="p-4 cursor-pointer text-sm font-medium text-gray-200 hover:text-gray-100 transition-colors">
                     Q. 集約戦略（最大/平均/結合）はどれがよいですか？
                 </summary>
-                <div class="px-4 pb-4 text-sm text-gray-400">
-                    クリアランス調査（リスク回避）では<strong class="text-gray-300">最大スコア</strong>を推奨します。
-                    いずれかの自社特許と類似度が高い候補を漏れなく検出します。
-                    平均スコアはポートフォリオ全体との関連を見たい場合に適しています。
+                <div class="px-4 pb-4 text-sm text-gray-400 space-y-2">
+                    <p>
+                        クリアランス調査（リスク回避）では<strong class="text-gray-300">最大スコア</strong>を推奨します。
+                        いずれかの自社特許と類似度が高い候補を漏れなく検出します。
+                        平均スコアはポートフォリオ全体との関連を見たい場合に適しています。
+                    </p>
+                    <div class="mt-3 p-3 bg-gray-800/60 border border-gray-700/40 rounded-md text-xs text-gray-500">
+                        <p class="font-semibold text-gray-400 mb-1">📐 数学的根拠</p>
+                        <p>
+                            自社特許群 <em>Q</em> = {<strong>q</strong><sub>1</sub>, …, <strong>q</strong><sub>n</sub>} と
+                            候補文書 <strong>c</strong> に対する集約関数を次のように定義します:
+                        </p>
+                        <ul class="mt-1 ml-4 list-disc space-y-1">
+                            <li>
+                                <strong class="text-gray-400">最大スコア（L<sup>∞</sup>型）</strong>:
+                                f<sub>max</sub>(<em>Q</em>, <strong>c</strong>) = max<sub>i∈{1,…,n}</sub> cos(<strong>q</strong><sub>i</sub>, <strong>c</strong>)
+                                — 決定理論におけるミニマックス戦略に対応し、<strong class="text-gray-400">最悪ケースのリスク</strong>（最も類似する1件）を検出します。
+                                侵害リスク評価では1件でも高類似度の特許があれば問題となるため、クリアランス調査に最適です。
+                            </li>
+                            <li>
+                                <strong class="text-gray-400">平均スコア（L<sup>1</sup>型）</strong>:
+                                f<sub>avg</sub>(<em>Q</em>, <strong>c</strong>) = (1/<em>n</em>) Σ<sub>i</sub> cos(<strong>q</strong><sub>i</sub>, <strong>c</strong>)
+                                — ポートフォリオ全体の重心との距離に近似し、個別の外れ値に対してロバストです。
+                                技術領域の俯瞰分析に適していますが、個別の高リスク特許を見逃す可能性があります。
+                            </li>
+                            <li>
+                                <strong class="text-gray-400">結合（セントロイド）</strong>:
+                                <strong>q̄</strong> = (1/<em>n</em>) Σ<sub>i</sub> <strong>q</strong><sub>i</sub> として
+                                cos(<strong>q̄</strong>, <strong>c</strong>) を計算
+                                — 平均スコアと類似しますが、ベクトル空間上の幾何的な重心を用いるため、
+                                各クエリの次元間の相関も考慮されます。
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </details>
             <details class="bg-gray-900 border border-gray-700/50 rounded-lg group">
                 <summary class="p-4 cursor-pointer text-sm font-medium text-gray-200 hover:text-gray-100 transition-colors">
                     Q. label列は必須ですか？
                 </summary>
-                <div class="px-4 pb-4 text-sm text-gray-400">
-                    いいえ。label列がなくてもクリアランス調査（類似度検索）は実行できます。
-                    label列は分類器学習（Tab4）で教師あり学習を行う場合にのみ必要です。
+                <div class="px-4 pb-4 text-sm text-gray-400 space-y-2">
+                    <p>
+                        いいえ。label列がなくてもクリアランス調査（類似度検索）は実行できます。
+                        label列は分類器学習（Tab4）で教師あり学習を行う場合にのみ必要です。
+                    </p>
+                    <div class="mt-3 p-3 bg-gray-800/60 border border-gray-700/40 rounded-md text-xs text-gray-500">
+                        <p class="font-semibold text-gray-400 mb-1">📐 アカデミックな根拠</p>
+                        <p>
+                            本システムでは機械学習の2つのパラダイムを併用しています:
+                        </p>
+                        <ul class="mt-1 ml-4 list-disc space-y-1">
+                            <li>
+                                <strong class="text-gray-400">教師なし類似度検索</strong>:
+                                ベクトル空間モデルにおけるコサイン類似度
+                                cos(<strong>q</strong>, <strong>c</strong>) = <strong>q</strong>·<strong>c</strong> / (‖<strong>q</strong>‖‖<strong>c</strong>‖)
+                                はラベル情報を必要としません。文書をベクトル化し、内積ベースの近傍探索を行う情報検索の基本手法です（Salton et al., 1975）。
+                            </li>
+                            <li>
+                                <strong class="text-gray-400">教師あり分類</strong>:
+                                分類器 <em>f</em>: ℝ<sup>m</sup> → {0, 1} の学習には、入力 <strong>x</strong><sub>i</sub> と
+                                正解ラベル <em>y</em><sub>i</sub> ∈ {0, 1} のペア {(<strong>x</strong><sub>i</sub>, <em>y</em><sub>i</sub>)}<sub>i=1</sub><sup>n</sup>
+                                が必要です。これはERM（経験的リスク最小化）原理に基づき、
+                                損失関数 (1/<em>n</em>) Σ<sub>i</sub> ℓ(<em>f</em>(<strong>x</strong><sub>i</sub>), <em>y</em><sub>i</sub>) を最小化するためです（Vapnik, 1998）。
+                            </li>
+                        </ul>
+                        <p class="mt-1">
+                            したがって、類似度検索のみであればラベル不要、分類器を利用する場合のみラベルが必要という設計は、
+                            教師なし/教師あり学習の理論的区分に正確に対応しています。
+                        </p>
+                    </div>
                 </div>
             </details>
             <details class="bg-gray-900 border border-gray-700/50 rounded-lg group">
                 <summary class="p-4 cursor-pointer text-sm font-medium text-gray-200 hover:text-gray-100 transition-colors">
                     Q. 設定を変更したら再ベクトル化は必要ですか？
                 </summary>
-                <div class="px-4 pb-4 text-sm text-gray-400">
-                    はい。ベクトル化手法、最大特徴数、ストップワード設定、請求項重視設定を変更した場合は
-                    再度「ベクトル化を実行」してください。
-                    変更前の古いベクトルのままでは正確な結果が得られません。
+                <div class="px-4 pb-4 text-sm text-gray-400 space-y-2">
+                    <p>
+                        はい。ベクトル化手法、最大特徴数、ストップワード設定、請求項重視設定を変更した場合は
+                        再度「ベクトル化を実行」してください。
+                        変更前の古いベクトルのままでは正確な結果が得られません。
+                    </p>
+                    <div class="mt-3 p-3 bg-gray-800/60 border border-gray-700/40 rounded-md text-xs text-gray-500">
+                        <p class="font-semibold text-gray-400 mb-1">📐 数学的根拠</p>
+                        <p>
+                            ベクトル化はパラメータ θ に依存する写像 φ<sub>θ</sub>: <em>D</em> → ℝ<sup>m</sup> です。
+                            パラメータ θ には以下が含まれます:
+                        </p>
+                        <ul class="mt-1 ml-4 list-disc space-y-1">
+                            <li><strong class="text-gray-400">最大特徴数</strong>: ベクトル空間の次元 <em>m</em> = |V| を決定（語彙サイズの上限）</li>
+                            <li><strong class="text-gray-400">ストップワード設定</strong>: 語彙集合 <em>V</em> のフィルタリング条件を変更</li>
+                            <li><strong class="text-gray-400">請求項重視</strong>: 重み付き文書表現 T(<em>d</em>) = ⨁<sub>s∈S</sub> tokens(<em>d,s</em>)<sup>⊕w<sub>s</sub></sup> の重み <em>w<sub>s</sub></em> を変更</li>
+                            <li><strong class="text-gray-400">ベクトル化手法</strong>: 写像関数 φ 自体の変更（TF-IDF vs Doc2Vec 等）</li>
+                        </ul>
+                        <p class="mt-1">
+                            パラメータ θ を変更すると写像 φ<sub>θ</sub> が変わるため、
+                            異なるパラメータで生成されたベクトル φ<sub>θ₁</sub>(<em>d</em>) と φ<sub>θ₂</sub>(<em>d'</em>) の間の
+                            コサイン類似度は<strong class="text-gray-400">数学的に無意味</strong>です
+                            — 異なるベクトル空間の要素間に内積は定義されません。
+                            全文書を同一の φ<sub>θ</sub> で再変換することで、比較の一貫性が保証されます。
+                        </p>
+                    </div>
                 </div>
             </details>
         </div>
