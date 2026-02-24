@@ -5,7 +5,14 @@
       "name": "flask-app",
       "runtimeExecutable": "python",
       "runtimeArgs": ["flask_app.py"],
-      "port": 5000
+      "port": 5000,
+      "autoPort": true
+    },
+    {
+      "name": "streamlit-app",
+      "runtimeExecutable": "streamlit",
+      "runtimeArgs": ["run", "app.py"],
+      "port": 8501
     }
   ]
 }
