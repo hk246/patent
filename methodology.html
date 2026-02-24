@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>特許クリアランス調査システム - 手法とフローチャート</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Noto Sans JP', 'Yu Gothic', sans-serif;
+            font-size: 14px;
+            line-height: 1.7;
+            color: #1a1a2e;
+            background: #f0f2f5;
+        }
+
+        /* ── Toolbar ── */
+        .toolbar {
+            position: sticky; top: 0; z-index: 10;
+            background: #1a1a2e; color: #ccc; padding: 10px 24px;
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 13px;
+        }
+        .toolbar button {
+            background: #5b5bf0; color: #fff; border: none; padding: 6px 16px;
+            border-radius: 6px; cursor: pointer; font-size: 13px;
+        }
+        .toolbar button:hover { background: #7070ff; }
+
+        /* ── Page ── */
+        .page {
+            max-width: 900px; margin: 32px auto; background: #fff;
+            border-radius: 12px; box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        /* ── Cover ── */
+        .cover {
+            background: linear-gradient(135deg, #1a1a2e 0%, #2d2b55 100%);
+            color: #fff; padding: 64px 56px; text-align: center;
+        }
+        .cover h1 { font-size: 26px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 12px; }
+        .cover .sub { font-size: 15px; color: #a0a0d0; margin-bottom: 32px; }
+        .cover .tags { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+        .cover .tag {
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+            padding: 4px 14px; border-radius: 20px; font-size: 12px; color: #c8c8ff;
+        }
+
+        /* ── Content ── */
+        .content { padding: 48px 56px; }
+        h2 {
+            font-size: 20px; font-weight: 700; color: #1a1a2e;
+            border-left: 4px solid #5b5bf0; padding-left: 14px;
+            margin: 40px 0 20px; line-height: 1.3;
+        }
+        h2:first-child { margin-top: 0; }
+        h3 {
+            font-size: 15px; font-weight: 700; color: #2d2b55;
+            margin: 28px 0 12px;
+        }
+        p { margin-bottom: 14px; color: #333; }
+        ul, ol { margin: 8px 0 16px 1.5em; color: #333; }
+        li { margin-bottom: 6px; }
+        strong { color: #1a1a2e; }
+
+        /* ── Flowchart ── */
+        .flow { margin: 24px 0; }
+        .flow-row {
+            display: flex; align-items: stretch; gap: 0;
+        }
+        .flow-step {
+            flex: 1; position: relative;
+            background: #f8f9ff; border: 2px solid #d0d0e8; border-radius: 10px;
+            padding: 16px 14px; text-align: center; min-height: 90px;
+            display: flex; flex-direction: column; justify-content: center;
+        }
+        .flow-step.active { background: #eef0ff; border-color: #5b5bf0; }
+        .flow-step .step-num {
+            position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+            background: #5b5bf0; color: #fff; font-size: 11px; font-weight: 700;
+            width: 24px; height: 24px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .flow-step .step-title { font-size: 13px; font-weight: 700; color: #1a1a2e; margin-top: 4px; }
+        .flow-step .step-desc { font-size: 11px; color: #666; margin-top: 4px; }
+        .flow-arrow {
+            display: flex; align-items: center; justify-content: center;
+            width: 36px; flex-shrink: 0; color: #5b5bf0; font-size: 20px; font-weight: 700;
+        }
+
+        /* ── Vertical flow ── */
+        .vflow { margin: 24px auto; max-width: 600px; }
+        .vflow-step {
+            background: #f8f9ff; border: 2px solid #d0d0e8; border-radius: 10px;
+            padding: 16px 20px; position: relative;
+        }
+        .vflow-step.highlight { border-color: #5b5bf0; background: #eef0ff; }
+        .vflow-step .vnum {
+            position: absolute; top: -12px; left: 24px;
+            background: #5b5bf0; color: #fff; font-size: 11px; font-weight: 700;
+            width: 24px; height: 24px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .vflow-step .vtitle { font-size: 14px; font-weight: 700; color: #1a1a2e; }
+        .vflow-step .vdetail { font-size: 12px; color: #555; margin-top: 4px; }
+        .vflow-step .vtech {
+            display: inline-block; margin-top: 6px;
+            background: #e8e8ff; color: #4040c0; font-size: 11px;
+            padding: 2px 10px; border-radius: 10px;
+        }
+        .vflow-arrow {
+            text-align: center; padding: 6px 0; color: #5b5bf0; font-size: 18px;
+        }
+
+        /* ── Info box ── */
+        .info-box {
+            background: #f0f4ff; border: 1px solid #c8d0ff; border-radius: 8px;
+            padding: 16px 20px; margin: 16px 0; font-size: 13px;
+        }
+        .info-box .info-title { font-weight: 700; color: #3030a0; margin-bottom: 6px; font-size: 13px; }
+
+        /* ── Table ── */
+        table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+        th { background: #2d2b55; color: #fff; padding: 10px 14px; text-align: left; font-weight: 600; }
+        td { padding: 10px 14px; border-bottom: 1px solid #e8e8f0; color: #333; }
+        tr:hover td { background: #f8f8ff; }
+
+        /* ── Comparison cards ── */
+        .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+        .card {
+            border: 1px solid #e0e0f0; border-radius: 10px; padding: 18px;
+            background: #fafbff;
+        }
+        .card .card-title {
+            font-size: 13px; font-weight: 700; color: #5b5bf0;
+            margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+        }
+        .card ul { margin: 0 0 0 1.2em; font-size: 12px; color: #444; }
+        .card li { margin-bottom: 4px; }
+
+        /* ── Section divider ── */
+        .divider { border: none; border-top: 2px solid #e8e8f0; margin: 40px 0; }
+
+        /* ── Print ── */
+        @media print {
+            .toolbar { display: none !important; }
+            body { background: #fff; }
+            .page { box-shadow: none; margin: 0; border-radius: 0; }
+            .cover { padding: 40px; }
+            .content { padding: 32px 40px; }
+            h2 { break-after: avoid; }
+            .vflow-step, .flow-step { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <span>特許クリアランス調査システム - 手法説明資料</span>
+    <button onclick="window.print()">印刷 / PDF出力</button>
+</div>
+
+<div class="page">
+
+    <!-- ═══════ Cover ═══════ -->
+    <div class="cover">
+        <h1>特許クリアランス調査<br>自動化システム</h1>
+        <div class="sub">手法とフローチャート</div>
+        <div class="tags">
+            <span class="tag">Azure OpenAI Service</span>
+            <span class="tag">TF-IDF / Doc2Vec</span>
+            <span class="tag">コサイン類似度</span>
+            <span class="tag">機械学習分類器</span>
+            <span class="tag">Flask Web App</span>
+        </div>
+    </div>
+
+    <div class="content">
+
+        <!-- ═══════ 1. Overview ═══════ -->
+        <h2>1. システム全体像</h2>
+        <p>
+            本システムは、特許公報番号を入力として、テキストマイニングと機械学習を組み合わせ、
+            類似特許の検出・関連度の自動判定を行う Web アプリケーションである。
+        </p>
+
+        <div class="flow-row" style="margin: 28px 0;">
+            <div class="flow-step">
+                <div class="step-num">1</div>
+                <div class="step-title">データ取得</div>
+                <div class="step-desc">Azure OpenAI<br>で要約抽出</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+                <div class="step-num">2</div>
+                <div class="step-title">前処理</div>
+                <div class="step-desc">形態素解析<br>重み付け</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step active">
+                <div class="step-num">3</div>
+                <div class="step-title">ベクトル化</div>
+                <div class="step-desc">TF-IDF /<br>Doc2Vec</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+                <div class="step-num">4</div>
+                <div class="step-title">類似度検索</div>
+                <div class="step-desc">コサイン類似度<br>ランキング</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+                <div class="step-num">5</div>
+                <div class="step-title">分類器判定</div>
+                <div class="step-desc">ML分類器<br>適合判定</div>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <div class="info-title">アプリの6タブ構成</div>
+            <strong>自社特許登録</strong> → <strong>候補特許DB</strong> → <strong>クリアランス調査</strong>
+            → <strong>分類器学習</strong> → <strong>可視化</strong> → <strong>使い方ガイド</strong>
+        </div>
+
+        <hr class="divider">
+
+        <!-- ═══════ 2. Detail Flow ═══════ -->
+        <h2>2. 処理フローチャート</h2>
+
+        <div class="vflow">
+            <div class="vflow-step highlight">
+                <div class="vnum">0</div>
+                <div class="vtitle">特許公報番号の入力</div>
+                <div class="vdetail">
+                    自社特許・候補特許の公報番号（JP2018-XXXXXX 等）をCSVで登録。
+                </div>
+            </div>
+            <div class="vflow-arrow">▼</div>
+
+            <div class="vflow-step highlight">
+                <div class="vnum">1</div>
+                <div class="vtitle">Azure OpenAI Service によるテキスト取得</div>
+                <div class="vdetail">
+                    公報番号をプロンプトに含めてAzure OpenAI API（GPTモデル）にリクエスト。
+                    LLMの知識に基づき、各特許の<strong>タイトル・要約・請求項・明細書</strong>を
+                    構造化テキストとして生成・取得する。
+                </div>
+                <span class="vtech">Azure OpenAI Service (GPT)</span>
+            </div>
+            <div class="vflow-arrow">▼</div>
+
+            <div class="vflow-step">
+                <div class="vnum">2</div>
+                <div class="vtitle">前処理（形態素解析・フィルタリング）</div>
+                <div class="vdetail">
+                    Janome形態素解析器で日本語をトークン化。名詞のみ抽出し、
+                    ストップワード（63語）を除去。セクション別に重み付けを適用。
+                </div>
+                <span class="vtech">Janome</span>
+            </div>
+            <div class="vflow-arrow">▼</div>
+
+            <div class="vflow-step">
+                <div class="vnum">3</div>
+                <div class="vtitle">テキストベクトル化</div>
+                <div class="vdetail">
+                    前処理済みテキストを数値ベクトルに変換。
+                    TF-IDF（スパース表現）、Doc2Vec / Word2Vec（密表現）から選択。
+                    LSAによる次元削減も適用可能。
+                </div>
+                <span class="vtech">scikit-learn / Gensim</span>
+            </div>
+            <div class="vflow-arrow">▼</div>
+
+            <div class="vflow-step">
+                <div class="vnum">4</div>
+                <div class="vtitle">コサイン類似度検索・ランキング</div>
+                <div class="vdetail">
+                    自社特許ベクトルと候補特許ベクトルのコサイン類似度を計算し、
+                    類似度スコア順にランキング。多重クエリ集約（最大/平均/結合）に対応。
+                </div>
+                <span class="vtech">コサイン類似度</span>
+            </div>
+            <div class="vflow-arrow">▼</div>
+
+            <div class="vflow-step">
+                <div class="vnum">5</div>
+                <div class="vtitle">機械学習分類器による適合判定</div>
+                <div class="vdetail">
+                    ラベル付きデータ（正解=1 / ノイズ=0）で分類器を学習し、
+                    未ラベル候補特許の関連度を自動予測。11種アルゴリズムの比較が可能。
+                </div>
+                <span class="vtech">scikit-learn（11種分類器）</span>
+            </div>
+            <div class="vflow-arrow">▼</div>
+
+            <div class="vflow-step highlight">
+                <div class="vnum">6</div>
+                <div class="vtitle">結果の可視化・出力</div>
+                <div class="vdetail">
+                    類似度分布、散布図（SVD/PCA 2次元射影）、混同行列、
+                    請求項構成要素マッピング等をインタラクティブに可視化。結果はCSVでエクスポート可能。
+                </div>
+                <span class="vtech">Plotly</span>
+            </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- ═══════ 3. Azure ═══════ -->
+        <h2>3. データ取得：Azure OpenAI Service</h2>
+        <p>
+            特許データベースからの手動コピーやスクレイピングを行わず、
+            公報番号のみから LLM が構造化テキストを生成する。
+        </p>
+
+        <div class="cards">
+            <div class="card">
+                <div class="card-title">&#x2705; メリット</div>
+                <ul>
+                    <li>公報番号のリストだけで一括取得</li>
+                    <li>企業向けセキュリティ基盤で運用</li>
+                    <li>データの地理的所在管理が可能</li>
+                    <li>手動コピー工数をゼロに</li>
+                </ul>
+            </div>
+            <div class="card">
+                <div class="card-title">&#x26A0; 留意点</div>
+                <ul>
+                    <li>LLM要約はハルシネーションのリスクあり</li>
+                    <li>原文の忠実な転記ではなく再構成</li>
+                    <li>定期的なサンプリング検証が必要</li>
+                    <li>API利用コストが発生</li>
+                </ul>
+            </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- ═══════ 4. Preprocessing ═══════ -->
+        <h2>4. 前処理パイプライン</h2>
+
+        <h3>4.1 形態素解析とフィルタリング</h3>
+        <p>
+            Janome形態素解析器により日本語テキストをトークンに分割し、
+            <strong>名詞（一般名詞）のみ</strong>を抽出する。基本形に正規化し、ストップワードを除去する。
+        </p>
+
+        <h3>4.2 セクション重み付け</h3>
+        <p>
+            特許文書のセクション（請求項、タイトル、要約、明細書）ごとに重みを設定し、
+            技術的に重要なセクションの語彙をベクトル表現に強く反映させる。
+        </p>
+        <table>
+            <thead>
+                <tr><th>セクション</th><th>重み</th><th>根拠</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>請求項（Claims）</td><td><strong>×5</strong></td><td>法的保護範囲を規定する核心部分</td></tr>
+                <tr><td>タイトル（Title）</td><td><strong>×3</strong></td><td>発明を簡潔に特定する識別情報</td></tr>
+                <tr><td>要約（Abstract）</td><td><strong>×2</strong></td><td>技術的概要の要約</td></tr>
+                <tr><td>明細書（Description）</td><td>×1</td><td>実施形態の詳細記述（基準重み）</td></tr>
+            </tbody>
+        </table>
+
+        <hr class="divider">
+
+        <!-- ═══════ 5. Vectorization ═══════ -->
+        <h2>5. テキストベクトル化</h2>
+        <p>
+            前処理済みテキストを数値ベクトルに変換する。3つの手法を選択可能。
+        </p>
+
+        <table>
+            <thead>
+                <tr><th>手法</th><th>表現型</th><th>特徴</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>TF-IDF</strong></td>
+                    <td>スパース（高次元）</td>
+                    <td>単語の出現頻度×希少性で重み付け。解釈性が高い。LSA次元削減と併用可。</td>
+                </tr>
+                <tr>
+                    <td><strong>Doc2Vec</strong></td>
+                    <td>密（200次元）</td>
+                    <td>文書レベルの分散表現。PV-DM / PV-DBOW の2モード。意味的汎化に優れる。</td>
+                </tr>
+                <tr>
+                    <td><strong>Word2Vec + 平均</strong></td>
+                    <td>密（100次元）</td>
+                    <td>単語ベクトルの平均プーリングで文書ベクトルを生成。</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="info-box">
+            <div class="info-title">TF-IDF の計算式</div>
+            <div style="text-align:center; font-style:italic; margin:8px 0;">
+                TF(t, d) = 1 + log(count(t, d)) &nbsp;|&nbsp;
+                IDF(t) = log(N / df(t)) + 1 &nbsp;|&nbsp;
+                tfidf = TF × IDF
+            </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- ═══════ 6. Similarity ═══════ -->
+        <h2>6. 類似度検索とランキング</h2>
+
+        <h3>6.1 コサイン類似度</h3>
+        <p>
+            2つのベクトル間の角度の余弦値で類似性を評価する。値域 [0, 1] で、
+            1 に近いほど類似。文書長の差異に頑健な指標。
+        </p>
+        <div style="text-align:center; font-style:italic; color:#555; margin:12px 0; font-size:15px;">
+            sim(a, b) = (a · b) / (‖a‖ × ‖b‖)
+        </div>
+
+        <h3>6.2 多重クエリ集約戦略</h3>
+        <p>
+            複数の自社特許をクエリとする場合の、スコア集約方法を3種選択可能。
+        </p>
+        <table>
+            <thead>
+                <tr><th>戦略</th><th>計算方法</th><th>用途</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>最大スコア</strong></td><td>max sim(q<sub>i</sub>, c)</td><td>いずれかの自社特許との類似が高ければ検出。リスク回避型。</td></tr>
+                <tr><td><strong>平均スコア</strong></td><td>mean sim(q<sub>i</sub>, c)</td><td>ポートフォリオ全体との平均的類似度。</td></tr>
+                <tr><td><strong>結合ベクトル</strong></td><td>sim(mean(q<sub>i</sub>), c)</td><td>自社特許群の重心との類似度。</td></tr>
+            </tbody>
+        </table>
+
+        <h3>6.3 請求項の構成要素分析</h3>
+        <p>
+            請求項を構成要素（エレメント）に分解し、各構成要素に対して候補特許中で
+            最も類似する文を特定する。スコアだけでなく「なぜ類似か」の根拠を提示。
+        </p>
+
+        <hr class="divider">
+
+        <!-- ═══════ 7. Classifier ═══════ -->
+        <h2>7. 機械学習分類器</h2>
+        <p>
+            ラベル付きデータ（正解=1 / ノイズ=0）から教師あり学習で二値分類器を構築し、
+            未ラベル候補特許の関連度を自動予測する。11種のアルゴリズムを同一条件で比較可能。
+        </p>
+
+        <table>
+            <thead>
+                <tr><th>分類器</th><th>手法概要</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>ランダムフォレスト</td><td>バギングによる決定木のアンサンブル</td></tr>
+                <tr><td>エイダブースト</td><td>適応的ブースティング</td></tr>
+                <tr><td>勾配ブースティング</td><td>勾配降下法によるブースティング</td></tr>
+                <tr><td>SVM（RBF / 線形）</td><td>マージン最大化による判別</td></tr>
+                <tr><td>ロジスティック回帰</td><td>線形確率モデル</td></tr>
+                <tr><td>ニューラルネット (MLP)</td><td>多層パーセプトロン</td></tr>
+                <tr><td>バギング</td><td>ブートストラップ集約</td></tr>
+                <tr><td>k近傍法</td><td>k最近傍による多数決</td></tr>
+                <tr><td>ナイーブベイズ</td><td>ガウシアンナイーブベイズ</td></tr>
+                <tr><td>決定木</td><td>単一CART決定木</td></tr>
+            </tbody>
+        </table>
+
+        <div class="info-box">
+            <div class="info-title">評価指標</div>
+            <strong>Precision</strong>（精度） / <strong>Recall</strong>（再現率） /
+            <strong>F1スコア</strong> / <strong>AUC-ROC</strong> /
+            <strong>交差検証 (Stratified K-Fold, k=5)</strong>
+        </div>
+
+        <hr class="divider">
+
+        <!-- ═══════ 8. Tech Stack ═══════ -->
+        <h2>8. 技術スタック</h2>
+
+        <table>
+            <thead>
+                <tr><th>レイヤー</th><th>技術</th><th>用途</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>データ取得</td><td>Azure OpenAI Service (GPT)</td><td>公報番号からの構造化テキスト生成</td></tr>
+                <tr><td>サーバサイド</td><td>Python 3.x / Flask 3.x</td><td>Web API・ルーティング・セッション管理</td></tr>
+                <tr><td>NLP前処理</td><td>Janome</td><td>日本語形態素解析・トークン化</td></tr>
+                <tr><td>ベクトル化</td><td>scikit-learn / Gensim</td><td>TF-IDF / Doc2Vec / Word2Vec</td></tr>
+                <tr><td>機械学習</td><td>scikit-learn</td><td>11種分類器・交差検証・評価</td></tr>
+                <tr><td>可視化</td><td>Plotly</td><td>インタラクティブなチャート生成</td></tr>
+                <tr><td>フロントエンド</td><td>Tailwind CSS / JavaScript</td><td>レスポンシブUI・AJAX通信</td></tr>
+            </tbody>
+        </table>
+
+        <hr class="divider">
+
+        <!-- ═══════ 9. Strengths & Limits ═══════ -->
+        <h2>9. 本手法のメリットと課題</h2>
+
+        <div class="cards">
+            <div class="card">
+                <div class="card-title">&#x1F4C8; メリット</div>
+                <ul>
+                    <li>定量的・客観的な評価基盤（F1, Recall等）</li>
+                    <li>網羅的スクリーニングで見落としリスクを低減</li>
+                    <li>再現性と一貫性の確保</li>
+                    <li>類似度＋分類器＋構成要素分析の多角的分析</li>
+                    <li>Azure OpenAIによるデータ取得の自動化</li>
+                    <li>11種アルゴリズム比較で最適モデル選定</li>
+                    <li>オープンソース中心で低コスト運用</li>
+                </ul>
+            </div>
+            <div class="card">
+                <div class="card-title">&#x1F6A7; 課題・限界</div>
+                <ul>
+                    <li>LLM要約のハルシネーションリスク</li>
+                    <li>均等論対象（異表現の技術的等価物）の検出困難</li>
+                    <li>特許図面情報の非考慮</li>
+                    <li>ラベルデータの品質・取得コスト</li>
+                    <li>分散表現のコーパス規模依存性</li>
+                    <li>ドメイン特化性（領域適応コスト）</li>
+                    <li>法的判断との乖離（補助ツールとして利用）</li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>
