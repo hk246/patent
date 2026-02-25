@@ -5,6 +5,9 @@ __pycache__/
 dist/
 build/
 
+# Virtual environment
+venv/
+
 # Session data (per-user state, pickle files)
 session_data/
 
@@ -21,3 +24,4 @@ models/*.pkl
 # OS
 .DS_Store
 Thumbs.db
+nul

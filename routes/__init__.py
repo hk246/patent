@@ -10,6 +10,7 @@ def register_blueprints(app):
     from routes.visualization import bp as visualization_bp
     from routes.settings import bp as settings_bp
     from routes.report import bp as report_bp
+    from routes.benchmark import bp as benchmark_bp
 
     app.register_blueprint(company_patents_bp)
     app.register_blueprint(candidate_db_bp)
@@ -18,3 +19,4 @@ def register_blueprints(app):
     app.register_blueprint(visualization_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(report_bp)
+    app.register_blueprint(benchmark_bp)

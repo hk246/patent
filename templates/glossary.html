@@ -104,8 +104,8 @@
         </div>
         {% endcall %}
 
-        {% call() glossary_item("doc2vec — 文書全体をベクトルで表現（論文の主要手法）", false) %}
-        <p class="text-sm text-gray-300 mb-3">word2vecを拡張し、文書（パラグラフ）全体をベクトルで表現する手法。論文で最も効果があったと報告されています。</p>
+        {% call() glossary_item("doc2vec — 文書全体をベクトルで表現", false) %}
+        <p class="text-sm text-gray-300 mb-3">word2vecを拡張し、文書（パラグラフ）全体をベクトルで表現する手法です。</p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="text-sm text-gray-300 space-y-2">
                 <p><strong class="text-brand-400">PV-DBOW（dm=0）:</strong> 文書ベクトルから文書内の単語を予測。シンプルで高速。</p>
@@ -115,8 +115,8 @@
                 <table class="w-full text-xs text-gray-400">
                     <thead class="bg-gray-800/80"><tr><th class="px-3 py-1.5 text-left">パラメータ</th><th class="px-3 py-1.5 text-left">推奨値</th></tr></thead>
                     <tbody class="divide-y divide-gray-800">
-                        <tr><td class="px-3 py-1.5">vector_size</td><td class="px-3 py-1.5 text-brand-400">200（論文値）</td></tr>
-                        <tr><td class="px-3 py-1.5">epochs</td><td class="px-3 py-1.5 text-brand-400">100（論文値）</td></tr>
+                        <tr><td class="px-3 py-1.5">vector_size</td><td class="px-3 py-1.5 text-brand-400">200</td></tr>
+                        <tr><td class="px-3 py-1.5">epochs</td><td class="px-3 py-1.5 text-brand-400">100</td></tr>
                         <tr><td class="px-3 py-1.5">window</td><td class="px-3 py-1.5">5〜10</td></tr>
                     </tbody>
                 </table>
@@ -171,10 +171,10 @@
         </div>
         {% endcall %}
 
-        {% call() glossary_item("各分類アルゴリズムの特徴（論文: 13種類比較）", false) %}
+        {% call() glossary_item("各分類アルゴリズムの特徴（13種類比較）", false) %}
         <div class="overflow-x-auto rounded border border-gray-700/50">
             <table class="w-full text-xs text-gray-400">
-                <thead class="bg-gray-800/80"><tr><th class="px-3 py-2 text-left">アルゴリズム</th><th class="px-3 py-2 text-left">論文評価</th><th class="px-3 py-2 text-left">特徴</th></tr></thead>
+                <thead class="bg-gray-800/80"><tr><th class="px-3 py-2 text-left">アルゴリズム</th><th class="px-3 py-2 text-left">評価</th><th class="px-3 py-2 text-left">特徴</th></tr></thead>
                 <tbody class="divide-y divide-gray-800">
                     <tr><td class="px-3 py-1.5">エイダブースト</td><td class="px-3 py-1.5 text-emerald-400">最良</td><td class="px-3 py-1.5">弱い分類器を逐次強化</td></tr>
                     <tr><td class="px-3 py-1.5">ランダムフォレスト</td><td class="px-3 py-1.5 text-emerald-400">最良</td><td class="px-3 py-1.5">多数の決定木のアンサンブル</td></tr>
@@ -188,7 +188,7 @@
                 </tbody>
             </table>
         </div>
-        <p class="text-xs text-gray-500 mt-2">論文（tokugikon 2018）ではAdaBoost・ランダムフォレストが最良の結果を示しました。</p>
+        <p class="text-xs text-gray-500 mt-2">一般にAdaBoost・ランダムフォレストがテキスト分類で良好な結果を示すことが多いです。</p>
         {% endcall %}
     </div>
 
@@ -288,13 +288,6 @@
         {% endcall %}
     </div>
 
-    <!-- References -->
-    <hr class="border-gray-800 mt-8 mb-4">
-    <div class="text-xs text-gray-500 space-y-1">
-        <p class="font-semibold text-gray-400">参考文献</p>
-        <p>安藤俊幸.「機械学習を用いた効率的な特許調査」tokugikon 2018.11.26. no.291, pp.50-64.</p>
-        <p>Quoc Le, Tomas Mikolov. "Distributed Representations of Sentences and Documents". ICML 2014.</p>
-    </div>
 </div>
 {% endblock %}
 

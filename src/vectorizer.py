@@ -277,30 +277,41 @@ class VectorizerFactory:
     METHODS = {
         'TF-IDF': 'TF-IDF（高速・安定、デフォルト推奨）',
         'TF-IDF + LSA': 'TF-IDF + 潜在意味解析（次元削減あり）',
-        'doc2vec (PV-DBOW)': 'doc2vec PV-DBOWモデル（gensim必要）',
-        'doc2vec (PV-DM)': 'doc2vec PV-DMモデル（gensim必要）',
-        'Word2Vec + 平均プーリング': 'Word2Vec 単語ベクトル平均（gensim必要）',
+        'doc2vec (PV-DBOW)': 'doc2vec PV-DBOWモデル（高精度・学習あり）',
+        'doc2vec (PV-DM)': 'doc2vec PV-DMモデル（精緻・計算重め）',
+        'Word2Vec + 平均プーリング': 'Word2Vec 単語ベクトル平均（意味ベース）',
     }
 
+    # 各ベクトル化クラスが受け付けるパラメータ
+    _TFIDF_PARAMS = {'max_features', 'ngram_range', 'lsa_components'}
+    _DOC2VEC_PARAMS = {'vector_size', 'window', 'min_count', 'epochs', 'dm', 'workers'}
+    _WORD2VEC_PARAMS = {'vector_size', 'window', 'min_count', 'epochs', 'pooling'}
+
     @staticmethod
-    def create(method: str, **kwargs):
+    def _filter_kwargs(kwargs, allowed):
+        return {k: v for k, v in kwargs.items() if k in allowed}
+
+    @classmethod
+    def create(cls, method: str, **kwargs):
         """指定した手法のベクトル化インスタンスを生成"""
         if method == 'TF-IDF':
-            return TFIDFDocVectorizer(**kwargs)
+            return TFIDFDocVectorizer(**cls._filter_kwargs(kwargs, cls._TFIDF_PARAMS))
         elif method == 'TF-IDF + LSA':
             params = {'lsa_components': 100}
-            params.update(kwargs)
+            params.update(cls._filter_kwargs(kwargs, cls._TFIDF_PARAMS))
             return TFIDFDocVectorizer(**params)
         elif method == 'doc2vec (PV-DBOW)':
             params = {'dm': 0}
-            params.update(kwargs)
+            params.update(cls._filter_kwargs(kwargs, cls._DOC2VEC_PARAMS))
             return Doc2VecVectorizer(**params)
         elif method == 'doc2vec (PV-DM)':
             params = {'dm': 1}
-            params.update(kwargs)
+            params.update(cls._filter_kwargs(kwargs, cls._DOC2VEC_PARAMS))
             return Doc2VecVectorizer(**params)
         elif method == 'Word2Vec + 平均プーリング':
-            return Word2VecPoolingVectorizer(pooling='mean', **kwargs)
+            params = {'pooling': 'mean'}
+            params.update(cls._filter_kwargs(kwargs, cls._WORD2VEC_PARAMS))
+            return Word2VecPoolingVectorizer(**params)
         else:
             raise ValueError(f"未対応のベクトル化手法: {method}")
 

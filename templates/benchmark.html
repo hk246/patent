@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}手法比較 - 特許クリアランス調査{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold text-gray-100">ベクトル化手法比較</h2>
+        <p class="text-xs text-gray-500 mt-1">
+            複数のベクトル化手法を同一条件で比較し、検索精度と分類精度の違いを確認します。
+        </p>
+    </div>
+
+    {% if not ready %}
+    <div class="bg-sky-900/20 border border-sky-700/30 rounded-lg p-6 text-center text-sky-300">
+        自社特許と候補特許DBを登録してください。
+    </div>
+    {% else %}
+
+    <!-- Method selection -->
+    <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 mb-6">
+        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+            比較するベクトル化手法を選択
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-3">
+            {% for method in methods %}
+            <label class="flex items-center gap-2 bg-gray-800/50 rounded-md px-3 py-2 cursor-pointer hover:bg-gray-800">
+                <input type="checkbox" name="benchmark_methods" value="{{ method }}"
+                       {% if loop.index <= 5 %}checked{% endif %}
+                       {% if not gensim_ok and ('doc2vec' in method or 'Word2Vec' in method) %}disabled{% endif %}
+                       class="w-3.5 h-3.5 rounded bg-gray-700 border-gray-600 text-brand-500 focus:ring-brand-500">
+                <span class="text-xs text-gray-300">{{ method }}</span>
+                {% if not gensim_ok and ('doc2vec' in method or 'Word2Vec' in method) %}
+                <span class="text-[10px] text-red-400">(gensim未)</span>
+                {% endif %}
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Parameters -->
+    <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 mb-6">
+        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">パラメータ</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">集約戦略</label>
+                <select id="bm-strategy"
+                        class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-sm text-gray-100">
+                    <option value="max" selected>最大スコア（推奨）</option>
+                    <option value="mean">平均スコア</option>
+                    <option value="combined">結合ベクトル</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">
+                    テスト割合: <span id="bm-test-val" class="text-gray-300">0.20</span>
+                </label>
+                <input type="range" id="bm-test-ratio" min="0.1" max="0.5" value="0.2" step="0.05"
+                       class="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-brand-500"
+                       oninput="document.getElementById('bm-test-val').textContent=parseFloat(this.value).toFixed(2)">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">
+                    CV分割数: <span id="bm-cv-val" class="text-gray-300">5</span>
+                </label>
+                <input type="range" id="bm-cv-folds" min="2" max="10" value="5" step="1"
+                       class="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-brand-500"
+                       oninput="document.getElementById('bm-cv-val').textContent=this.value">
+            </div>
+        </div>
+    </div>
+
+    <!-- Classifier selection -->
+    {% if has_labels %}
+    <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 mb-6">
+        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+            比較する分類器（少ないほど高速）
+        </h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+            {% for algo in algorithms %}
+            <label class="flex items-center gap-2 bg-gray-800/50 rounded-md px-3 py-2 cursor-pointer hover:bg-gray-800">
+                <input type="checkbox" name="benchmark_classifiers" value="{{ algo }}"
+                       {% if algo in ['ランダムフォレスト', 'ロジスティック回帰', 'SVM (RBFカーネル)'] %}checked{% endif %}
+                       class="w-3.5 h-3.5 rounded bg-gray-700 border-gray-600 text-brand-500 focus:ring-brand-500">
+                <span class="text-xs text-gray-300">{{ algo }}</span>
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-amber-900/20 border border-amber-700/30 rounded-lg p-4 text-amber-300 text-sm mb-6">
+        候補特許DBに 'label' 列がないため分類器比較は省略されます（検索精度のみ比較）。
+    </div>
+    {% endif %}
+
+    <!-- Run button -->
+    <button id="btn-run-benchmark"
+            class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors text-sm mb-6">
+        ベンチマーク実行
+    </button>
+
+    <!-- Results area -->
+    <div id="benchmark-results" class="hidden space-y-6">
+        <div class="flex items-center justify-between">
+            <div class="text-sm text-gray-400" id="benchmark-time"></div>
+        </div>
+
+        <div>
+            <h3 class="text-lg font-semibold text-gray-100 mb-3">総合サマリー</h3>
+            <div id="table-summary" class="overflow-x-auto rounded-lg border border-gray-700/50"></div>
+        </div>
+
+        <div id="chart-precision-area" class="bg-gray-900 border border-gray-700/50 rounded-lg p-4"></div>
+        <div id="chart-recall-area" class="bg-gray-900 border border-gray-700/50 rounded-lg p-4"></div>
+        <div id="chart-f1-area" class="bg-gray-900 border border-gray-700/50 rounded-lg p-4"></div>
+        <div id="chart-time-area" class="bg-gray-900 border border-gray-700/50 rounded-lg p-4"></div>
+        <div id="chart-radar-area" class="bg-gray-900 border border-gray-700/50 rounded-lg p-4"></div>
+
+        <div id="detail-tables" class="space-y-3"></div>
+    </div>
+
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var btnRun = document.getElementById('btn-run-benchmark');
+    if (!btnRun) return;
+
+    btnRun.addEventListener('click', async function() {
+        var methods = Array.from(document.querySelectorAll('input[name="benchmark_methods"]:checked'))
+                          .map(function(cb) { return cb.value; });
+        var classifiers = Array.from(document.querySelectorAll('input[name="benchmark_classifiers"]:checked'))
+                              .map(function(cb) { return cb.value; });
+
+        if (methods.length < 2) {
+            showFlash('2つ以上の手法を選択してください。', 'warning');
+            return;
+        }
+
+        var result = await ajaxPost('/benchmark/run', {
+            methods: methods,
+            classifiers: classifiers.length > 0 ? classifiers : null,
+            strategy: document.getElementById('bm-strategy').value,
+            test_ratio: parseFloat(document.getElementById('bm-test-ratio').value),
+            cv_folds: parseInt(document.getElementById('bm-cv-folds').value),
+        }, { loadingMessage: 'ベンチマーク実行中（数分かかる場合があります）...' });
+
+        if (result.error) return;
+
+        var area = document.getElementById('benchmark-results');
+        area.classList.remove('hidden');
+        document.getElementById('benchmark-time').textContent =
+            '実行完了 (合計 ' + result.total_time + '秒)';
+
+        // Summary table
+        if (result.tables && result.tables.summary) {
+            document.getElementById('table-summary').innerHTML = result.tables.summary;
+            styleTable(document.getElementById('table-summary'));
+        }
+
+        // Charts
+        var chartMap = {
+            'precision': 'chart-precision-area',
+            'recall': 'chart-recall-area',
+            'f1': 'chart-f1-area',
+            'time': 'chart-time-area',
+            'radar': 'chart-radar-area',
+        };
+        for (var key in chartMap) {
+            var container = document.getElementById(chartMap[key]);
+            if (result.charts && result.charts[key]) {
+                container.classList.remove('hidden');
+                insertHTMLWithScripts(container, result.charts[key]);
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        // Detail tables
+        if (result.tables && result.tables.details) {
+            var detailContainer = document.getElementById('detail-tables');
+            detailContainer.innerHTML = '<h3 class="text-lg font-semibold text-gray-100">手法別 分類器詳細</h3>';
+            for (var method in result.tables.details) {
+                detailContainer.innerHTML +=
+                    '<details class="bg-gray-900 border border-gray-700/50 rounded-lg">' +
+                    '<summary class="px-4 py-3 cursor-pointer hover:bg-gray-800/50 text-sm text-gray-300 font-medium">' +
+                    method + ' - 分類器比較テーブル</summary>' +
+                    '<div class="px-4 pb-4 overflow-x-auto">' + result.tables.details[method] + '</div>' +
+                    '</details>';
+            }
+            styleTable(detailContainer);
+        }
+
+        showFlash('ベンチマーク完了 (' + result.total_time + '秒)', 'success');
+    });
+
+    function styleTable(container) {
+        container.querySelectorAll('table').forEach(function(t) {
+            t.classList.add('w-full', 'text-sm', 'text-gray-300');
+            t.querySelectorAll('thead').forEach(function(h) {
+                h.classList.add('bg-gray-800/80', 'text-gray-400', 'text-xs', 'uppercase');
+            });
+            t.querySelectorAll('th').forEach(function(th) {
+                th.classList.add('px-3', 'py-2', 'text-left');
+            });
+            t.querySelectorAll('td').forEach(function(td) {
+                td.classList.add('px-3', 'py-2');
+            });
+            t.querySelectorAll('tbody tr').forEach(function(tr) {
+                tr.classList.add('border-t', 'border-gray-800', 'hover:bg-gray-800/40');
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

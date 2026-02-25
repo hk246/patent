@@ -35,6 +35,7 @@ from classifier import (
     PatentClassifier, compare_classifiers,
     get_algorithm_list, get_algorithm_description,
 )
+from benchmark import run_full_benchmark
 
 # ════════════════════════════════════════════
 # ページ設定
@@ -62,6 +63,7 @@ def init_session_state():
         'search_results': None,
         'classifier': None,
         'multi_query_strategy': 'max',
+        'benchmark_results': None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -189,7 +191,6 @@ with st.sidebar:
                 db_n = len(st.session_state['patent_db']) if st.session_state['patent_db'] is not None else 0
                 st.success(f"完了 自社:{cp_n}件 候補:{db_n}件")
 
-    st.caption("論文参考: tokugikon 2018.11.26 no.291\n安藤俊幸（花王株式会社）")
 
 # ════════════════════════════════════════════
 # メインUI – 6タブ構成
@@ -197,12 +198,13 @@ with st.sidebar:
 st.title("🔬 特許クリアランス調査システム v2.1")
 st.caption("自社特許ポートフォリオ × 文字ベクトル化 × 機械学習")
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "🏢 自社特許登録",
     "📂 候補特許DB",
     "🔍 クリアランス調査",
     "🤖 分類器学習",
     "📊 可視化",
+    "🔬 手法比較",
     "📖 専門用語解説",
 ])
 
@@ -854,9 +856,176 @@ with tab5:
 
 
 # ════════════════════════════════════════════
-# TAB 6: 専門用語解説
+# TAB 6: 手法比較（ベンチマーク）
 # ════════════════════════════════════════════
 with tab6:
+    st.header("🔬 手法比較（ベンチマーク）")
+    st.caption("複数のベクトル化手法を同一条件で比較し、検索精度と分類精度の違いを確認します。")
+
+    _bm_cp = st.session_state['company_patents']
+    _bm_db = st.session_state['patent_db']
+
+    if _bm_cp.empty or _bm_db is None:
+        st.info("タブ1で自社特許、タブ2で候補特許DBを登録してください。")
+        st.stop()
+
+    _bm_available = list(VectorizerFactory.METHODS.keys())
+    if not VectorizerFactory.is_gensim_available():
+        _bm_gensim = [m for m in _bm_available if 'doc2vec' in m or 'Word2Vec' in m]
+        if _bm_gensim:
+            st.warning(f"gensim未インストール: {', '.join(_bm_gensim)} は使用不可")
+        _bm_available = [m for m in _bm_available if m not in _bm_gensim]
+
+    _bm_selected = st.multiselect(
+        "比較するベクトル化手法",
+        _bm_available, default=_bm_available,
+    )
+
+    _bm_c1, _bm_c2, _bm_c3 = st.columns(3)
+    with _bm_c1:
+        _bm_strategy = st.selectbox("集約戦略", list(STRATEGY_DESCRIPTIONS.keys()),
+                                     format_func=lambda x: STRATEGY_DESCRIPTIONS[x], key='bm_strat')
+    with _bm_c2:
+        _bm_test = st.slider("テスト割合", 0.1, 0.5, 0.2, 0.05, key='bm_test')
+    with _bm_c3:
+        _bm_cv = st.slider("CV分割数", 2, 10, 5, key='bm_cv')
+
+    _bm_algos = st.multiselect(
+        "比較する分類器（少ないほど高速）",
+        get_algorithm_list(),
+        default=['ランダムフォレスト', 'ロジスティック回帰', 'SVM (RBFカーネル)'],
+        key='bm_algos',
+    )
+
+    if st.button("🚀 ベンチマーク実行", type="primary", use_container_width=True):
+        if len(_bm_selected) < 2:
+            st.warning("2つ以上の手法を選択してください。")
+        else:
+            _bm_prog = st.progress(0)
+            _bm_status = st.empty()
+
+            def _bm_progress(i, total, method):
+                _bm_prog.progress(i / total if total > 0 else 1.0)
+                _bm_status.text(f"処理中: {method} ({i+1}/{total})")
+
+            _bm_preprocessor = get_preprocessor(use_stop_words=True)
+            _bm_weights = {'title': 3, 'abstract': 2, 'claims': 5, 'description': 1}
+            _bm_cp_texts = preprocess_rows(_bm_cp, _bm_preprocessor, _bm_weights)
+            _bm_db_texts = preprocess_rows(_bm_db, _bm_preprocessor, _bm_weights)
+
+            with st.spinner("ベンチマーク実行中（数分かかる場合があります）..."):
+                _bm_result = run_full_benchmark(
+                    methods=_bm_selected,
+                    company_texts=_bm_cp_texts,
+                    db_texts=_bm_db_texts,
+                    db_df=_bm_db,
+                    company_df=_bm_cp,
+                    strategy=_bm_strategy,
+                    test_ratio=_bm_test,
+                    cv_folds=_bm_cv,
+                    classifier_algorithms=_bm_algos if _bm_algos else None,
+                    vectorizer_kwargs={'max_features': max_features},
+                    progress_callback=_bm_progress,
+                )
+            _bm_prog.progress(1.0)
+            _bm_status.text(f"完了! (合計 {_bm_result['total_time']}秒)")
+            st.session_state['benchmark_results'] = _bm_result
+
+    # ─── 結果表示 ───
+    _bm_res = st.session_state.get('benchmark_results')
+    if _bm_res:
+        _bm_summary = _bm_res['summary_df']
+
+        st.divider()
+        st.subheader("総合サマリー")
+        st.dataframe(_bm_summary, hide_index=True, use_container_width=True)
+
+        # Precision@K 比較
+        _p_cols = [c for c in _bm_summary.columns if c.startswith('P@')]
+        if _p_cols:
+            st.subheader("検索精度 Precision@K 比較")
+            _p_data = _bm_summary.melt(id_vars='ベクトル化手法', value_vars=_p_cols,
+                                        var_name='K', value_name='Precision')
+            _fig_p = px.bar(_p_data, x='K', y='Precision', color='ベクトル化手法',
+                           barmode='group', title='ベクトル化手法別 Precision@K', text_auto='.3f')
+            _fig_p.update_layout(yaxis_range=[0, 1.05])
+            st.plotly_chart(_fig_p, use_container_width=True)
+
+        # Recall@K 比較
+        _r_cols = [c for c in _bm_summary.columns if c.startswith('R@')]
+        if _r_cols:
+            st.subheader("再現率 Recall@K 比較")
+            _r_data = _bm_summary.melt(id_vars='ベクトル化手法', value_vars=_r_cols,
+                                        var_name='K', value_name='Recall')
+            _fig_r = px.bar(_r_data, x='K', y='Recall', color='ベクトル化手法',
+                           barmode='group', title='ベクトル化手法別 Recall@K', text_auto='.3f')
+            _fig_r.update_layout(yaxis_range=[0, 1.05])
+            st.plotly_chart(_fig_r, use_container_width=True)
+
+        # 最良F1 比較
+        if '最良F1' in _bm_summary.columns:
+            st.subheader("分類器精度比較（各手法の最良F1）")
+            _fig_f1 = px.bar(
+                _bm_summary.sort_values('最良F1', ascending=True),
+                x='最良F1', y='ベクトル化手法', orientation='h',
+                color='最良F1', color_continuous_scale='RdYlGn',
+                text='最良分類器',
+                title='ベクトル化手法別 最良分類器F1スコア',
+            )
+            _fig_f1.update_layout(xaxis_range=[0, 1.05],
+                                  height=max(300, len(_bm_summary) * 60 + 120))
+            st.plotly_chart(_fig_f1, use_container_width=True)
+
+        # 処理時間
+        st.subheader("処理時間比較")
+        _fig_t = px.bar(_bm_summary, x='ベクトル化手法', y='ベクトル化時間(秒)',
+                        color='ベクトル化手法', title='ベクトル化所要時間')
+        st.plotly_chart(_fig_t, use_container_width=True)
+
+        # レーダーチャート
+        st.subheader("総合レーダーチャート")
+        _radar_fig = go.Figure()
+        _max_time = _bm_summary['ベクトル化時間(秒)'].max()
+        for _, _row in _bm_summary.iterrows():
+            _metrics = {}
+            if 'R@20' in _row: _metrics['Recall@20'] = _row['R@20']
+            elif 'R@10' in _row: _metrics['Recall@10'] = _row['R@10']
+            if 'P@20' in _row: _metrics['Precision@20'] = _row['P@20']
+            elif 'P@10' in _row: _metrics['Precision@10'] = _row['P@10']
+            if '最良F1' in _row: _metrics['分類器F1'] = _row['最良F1']
+            if '最良AUC' in _row: _metrics['AUC'] = _row['最良AUC']
+            _metrics['速度'] = 1 - (_row['ベクトル化時間(秒)'] / _max_time) if _max_time > 0 else 1.0
+            _cats = list(_metrics.keys())
+            _vals = list(_metrics.values()) + [list(_metrics.values())[0]]
+            _radar_fig.add_trace(go.Scatterpolar(
+                r=_vals, theta=_cats + [_cats[0]],
+                fill='toself', name=_row['ベクトル化手法'], opacity=0.6,
+            ))
+        _radar_fig.update_layout(
+            polar=dict(radialaxis=dict(range=[0, 1])),
+            title='ベクトル化手法 総合比較', height=500,
+        )
+        st.plotly_chart(_radar_fig, use_container_width=True)
+
+        # 手法別分類器詳細
+        st.subheader("手法別 分類器詳細")
+        for _method, _clf_res in _bm_res['classifier_results'].items():
+            _cmp_df = _clf_res.get('comparison_df')
+            if _cmp_df is not None and not _cmp_df.empty:
+                with st.expander(f"{_method} - 分類器比較"):
+                    st.dataframe(_cmp_df, hide_index=True, use_container_width=True)
+
+        st.download_button(
+            "📥 ベンチマーク結果をCSVでダウンロード",
+            data=df_to_csv(_bm_summary),
+            file_name="benchmark_results.csv", mime="text/csv",
+        )
+
+
+# ════════════════════════════════════════════
+# TAB 7: 専門用語解説
+# ════════════════════════════════════════════
+with tab7:
     st.header("📖 専門用語解説")
     st.caption("本システムで使用している技術用語をカテゴリ別に解説します。")
 
@@ -958,19 +1127,17 @@ with tab6:
 | `epochs` | 学習の繰り返し回数 | 10〜100 |
             """)
 
-        with st.expander("📌 doc2vec ― 文書全体をベクトルで表現（論文の主要手法）"):
+        with st.expander("📌 doc2vec ― 文書全体をベクトルで表現"):
             col1, col2 = st.columns(2)
             with col1:
                 st.markdown("""
 **概念:** word2vecを拡張し、文書（パラグラフ）全体をベクトルで表現する
-論文で最も効果があった手法として報告されている。
 
 **2つのモード:**
 
 **PV-DBOW（dm=0）**
 - 文書ベクトルから文書内の単語を予測するモデル
 - シンプルで高速
-- 論文ではこちらを主に使用
 
 **PV-DM（dm=1）**
 - 文書ベクトル＋前後の単語から次の単語を予測
@@ -979,8 +1146,8 @@ with tab6:
 **ハイパーパラメータ:**
 | パラメータ | 意味 | 推奨値 |
 |-----------|------|--------|
-| `vector_size` | 文書ベクトルの次元数 | **200**（論文値） |
-| `epochs` | 学習回数 | **100**（論文値）|
+| `vector_size` | 文書ベクトルの次元数 | **200** |
+| `epochs` | 学習回数 | **100** |
 | `window` | 文脈窓サイズ | 5〜10 |
 | `min_count` | 最小出現回数 | 2 |
                 """)
@@ -1038,7 +1205,7 @@ with tab6:
 
 **特徴:**
 - ✅ word2vec の意味情報 + TF-IDF の重要度を両立
-- ✅ 論文でも可視化で良好なスコアを確認（score=0.756）
+- ✅ 可視化で良好なスコアを確認できることがある
 - ❌ 計算コストが比較的高い
             """)
 
@@ -1136,7 +1303,7 @@ TP=正しく「関連」と予測, FP=誤って「関連」と予測, FN=見逃�
 - ドロップアウト（ニューラルネットの場合）
             """)
 
-        with st.expander("📌 各分類アルゴリズムの特徴（論文: 13種類比較）"):
+        with st.expander("📌 各分類アルゴリズムの特徴（13種類比較）"):
             alg_data = {
                 'アルゴリズム': [
                     'エイダブースト（AdaBoost）',
@@ -1150,7 +1317,7 @@ TP=正しく「関連」と予測, FP=誤って「関連」と予測, FN=見逃�
                     'ナイーブベイズ',
                     '決定木',
                 ],
-                '論文評価': ['◎ 最良','◎ 最良','○','○','○','△','○','△','△','△'],
+                '評価': ['◎ 最良','◎ 最良','○','○','○','△','○','△','△','△'],
                 '特徴': [
                     '弱い分類器を逐次強化。精度が高い',
                     '多数の決定木のアンサンブル。過学習しにくい',
@@ -1165,7 +1332,7 @@ TP=正しく「関連」と予測, FP=誤って「関連」と予測, FN=見逃�
                 ],
             }
             st.dataframe(pd.DataFrame(alg_data), hide_index=True, use_container_width=True)
-            st.caption("論文（tokugikon 2018）では AdaBoost・ランダムフォレストが最良の結果を示した。")
+            st.caption("一般にAdaBoost・ランダムフォレストがテキスト分類で良好な結果を示すことが多い。")
 
         with st.expander("📌 AUC-ROC スコア"):
             st.markdown("""
@@ -1258,7 +1425,7 @@ $$\\text{高次元行列} \\approx U \\cdot \\Sigma \\cdot V^T$$
 1. **散布図の生成**: 10,000次元のTF-IDFベクトルを2次元に圧縮
 2. **LSA（TF-IDF + LSA）**: 100〜300次元に圧縮して類似度計算の精度を上げる
 
-**次元削減の比喩（論文より）:**
+**次元削減の比喩:**
 > 地球（3次元の球）を地図（2次元の平面）に投影するとき、必ず歪みが生じる。
 > SVD・PCAも同様に高次元の情報を2次元に圧縮する際に情報が失われる。
 > 地図の図法（メルカトル、モルワイデ等）のように、目的に応じた手法を選ぶことが重要。
@@ -1335,7 +1502,7 @@ $$\\text{高次元行列} \\approx U \\cdot \\Sigma \\cdot V^T$$
 | スコープ | 既定（変わりにくい） | 製品仕様に依存 |
 | 対象 | 新着公開特許 | 有効特許（存続中） |
 
-**本論文でのSDI活用:**
+**SDIの活用例:**
 自社の技術スコープを定め、2クラス分類（シグナル/ノイズ）で新着特許から関連文書を自動選別する。
             """)
 
@@ -1363,7 +1530,7 @@ $$\\text{高次元行列} \\approx U \\cdot \\Sigma \\cdot V^T$$
 **特許調査での活用:**
 - 類似度検索と組み合わせることで調査精度が向上
 - IPC/FIで「関連する技術領域」を絞り込み → 候補特許DB の範囲を限定
-- 論文でも「IPC,FI,Ftermをキーワードと組み合わせて使うことが重要」と言及
+- IPC/FI/Ftermをキーワードと組み合わせて使うことが重要
 
 **本システムへの組み込み方:**
 ```
@@ -1408,7 +1575,7 @@ J-PlatPat等でCSVエクスポートし
 
         with st.expander("📌 フリーラムレー・ノーフリー定理（NFL定理）"):
             st.markdown("""
-**論文で言及されているNFL定理（No Free Lunch Theorem）:**
+**NFL定理（No Free Lunch Theorem）:**
 
 > 「あらゆる問題に対して最適なアルゴリズムは存在しない」
 
@@ -1426,7 +1593,7 @@ J-PlatPat等でCSVエクスポートし
 
         with st.expander("📌 スーパーセットの子の定理（クレームの読み方）"):
             st.markdown("""
-**論文で言及されている特許クレーム解釈の基本原則:**
+**特許クレーム解釈の基本原則:**
 
 クリアランス調査では「文言侵害」の判断が基本となりますが、
 均等論・上位概念での侵害にも注意が必要です。
@@ -1444,7 +1611,7 @@ J-PlatPat等でCSVエクスポートし
 
         with st.expander("📌 正解公報 / ノイズ公報 の考え方"):
             st.markdown("""
-**論文（特許文書の2クラス分類）の用語:**
+**特許文書の2クラス分類の用語:**
 
 | 用語 | 意味 | 本システムの `label` 値 |
 |------|------|----------------------|
@@ -1461,16 +1628,7 @@ J-PlatPat等でCSVエクスポートし
 - 推奨: 各クラス50件以上（合計100件）
 - ディープラーニング活用: 500件以上が望ましい
 
-**論文の実験規模:**
+**実験規模の参考値:**
 - 正解公報: 49件 / ノイズ公報: 705件 / 合計: 754件
             """)
 
-    st.divider()
-    st.markdown("""
-### 参考文献
-- 安藤俊幸.「機械学習を用いた効率的な特許調査 ― アジア特許情報研究会における研究活動紹介」
-  *tokugikon* 2018.11.26. no.291, pp.50-64.
-- Yoon Kim. "Convolutional Neural Networks for Sentence Classification". *arXiv:1408.5882* (2014).
-- Quoc Le, Tomas Mikolov. "Distributed Representations of Sentences and Documents". *ICML 2014*.
-- Moen & Salimäki. "Sparse Composite Document Vectors". *arXiv:1612.06778* (2016).
-    """)

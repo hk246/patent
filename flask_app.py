@@ -1,15 +1,16 @@
 """
 特許クリアランス調査システム v2.1 — Flask版
-論文参考: 文字ベクトル化と機械学習を用いた効率的な特許調査
-(tokugikon 2018.11.26 no.291 安藤俊幸)
 
 起動:
-  pip install -r requirements.txt
-  python flask_app.py
+  start.bat  (推奨)
+  または: python flask_app.py
 """
 import sys
 import os
 import uuid
+import socket
+import webbrowser
+import threading
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
@@ -95,6 +96,41 @@ def create_app():
     return app
 
 
+def find_free_port(start=5000, end=5099):
+    """空きポートを探す（start〜endの範囲）"""
+    for port in range(start, end + 1):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(('127.0.0.1', port))
+                return port
+            except OSError:
+                continue
+    raise RuntimeError(f"ポート {start}〜{end} がすべて使用中です")
+
+
+def open_browser(port):
+    """サーバー起動後にブラウザを自動で開く"""
+    import time
+    time.sleep(1.5)
+    webbrowser.open(f'http://127.0.0.1:{port}/')
+
+
 if __name__ == '__main__':
     app = create_app()
-    app.run(debug=True, port=int(os.environ.get('PORT', 5000)))
+
+    # ポート決定: 環境変数 → 自動検出
+    env_port = os.environ.get('PORT')
+    if env_port:
+        port = int(env_port)
+    else:
+        port = find_free_port()
+
+    # ブラウザ自動起動（--no-browser で無効化可能）
+    if '--no-browser' not in sys.argv:
+        threading.Thread(target=open_browser, args=(port,), daemon=True).start()
+
+    print(f"\n  特許クリアランス調査システム")
+    print(f"  http://127.0.0.1:{port}/")
+    print(f"  終了するには Ctrl+C を押してください\n")
+
+    app.run(debug=False, port=port)
