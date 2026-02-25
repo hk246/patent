@@ -1,5 +1,5 @@
 """
-特許クリアランス調査システム v2.1 — Flask版
+特許クリアランス調査システム v1.01 — Flask版
 
 起動:
   start.bat  (推奨)
@@ -129,8 +129,8 @@ if __name__ == '__main__':
     if '--no-browser' not in sys.argv:
         threading.Thread(target=open_browser, args=(port,), daemon=True).start()
 
-    print(f"\n  特許クリアランス調査システム")
+    print(f"\n  特許クリアランス調査システム v1.01")
     print(f"  http://127.0.0.1:{port}/")
     print(f"  終了するには Ctrl+C を押してください\n")
 
-    app.run(debug=False, port=port)
+    app.run(debug=True, port=port, use_reloader=False)

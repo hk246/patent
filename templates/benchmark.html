@@ -4,9 +4,9 @@
 {% block content %}
 <div class="max-w-7xl mx-auto">
     <div class="mb-6">
-        <h2 class="text-2xl font-bold text-gray-100">ベクトル化手法比較</h2>
+        <h2 class="text-2xl font-bold text-gray-100">パラメータ比較ベンチマーク</h2>
         <p class="text-xs text-gray-500 mt-1">
-            複数のベクトル化手法を同一条件で比較し、検索精度と分類精度の違いを確認します。
+            ベクトル化手法・集約戦略・分類器の組み合わせを比較し、最適な設定を探します。
         </p>
     </div>
 
@@ -16,16 +16,16 @@
     </div>
     {% else %}
 
-    <!-- Method selection -->
-    <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 mb-6">
+    <!-- ━━━ Method selection ━━━ -->
+    <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 mb-4">
         <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
-            比較するベクトル化手法を選択
+            ベクトル化手法
         </h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {% for method in methods %}
             <label class="flex items-center gap-2 bg-gray-800/50 rounded-md px-3 py-2 cursor-pointer hover:bg-gray-800">
                 <input type="checkbox" name="benchmark_methods" value="{{ method }}"
-                       {% if loop.index <= 5 %}checked{% endif %}
+                       {% if loop.index <= 2 %}checked{% endif %}
                        {% if not gensim_ok and ('doc2vec' in method or 'Word2Vec' in method) %}disabled{% endif %}
                        class="w-3.5 h-3.5 rounded bg-gray-700 border-gray-600 text-brand-500 focus:ring-brand-500">
                 <span class="text-xs text-gray-300">{{ method }}</span>
@@ -37,19 +37,33 @@
         </div>
     </div>
 
-    <!-- Parameters -->
-    <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 mb-6">
-        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">パラメータ</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-            <div>
-                <label class="block text-xs text-gray-500 mb-1">集約戦略</label>
-                <select id="bm-strategy"
-                        class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-sm text-gray-100">
-                    <option value="max" selected>最大スコア（推奨）</option>
-                    <option value="mean">平均スコア</option>
-                    <option value="combined">結合ベクトル</option>
-                </select>
-            </div>
+    <!-- ━━━ Strategy selection ━━━ -->
+    <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 mb-4">
+        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+            集約戦略（マルチクエリ方式）
+        </h3>
+        <p class="text-[11px] text-gray-600 mb-3">
+            自社特許が複数あるとき、候補特許との類似度をどう集約するかの方式です。複数選択で比較できます。
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {% for key, desc in strategy_desc.items() %}
+            <label class="flex items-start gap-2 bg-gray-800/50 rounded-md px-3 py-2.5 cursor-pointer hover:bg-gray-800">
+                <input type="checkbox" name="benchmark_strategies" value="{{ key }}"
+                       {% if key == 'max' %}checked{% endif %}
+                       class="w-3.5 h-3.5 mt-0.5 rounded bg-gray-700 border-gray-600 text-brand-500 focus:ring-brand-500">
+                <div>
+                    <span class="text-xs font-medium text-gray-200">{{ key }}</span>
+                    <p class="text-[11px] text-gray-500 mt-0.5 leading-tight">{{ desc }}</p>
+                </div>
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ━━━ Parameters ━━━ -->
+    <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 mb-4">
+        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">分類器パラメータ</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
             <div>
                 <label class="block text-xs text-gray-500 mb-1">
                     テスト割合: <span id="bm-test-val" class="text-gray-300">0.20</span>
@@ -69,9 +83,9 @@
         </div>
     </div>
 
-    <!-- Classifier selection -->
+    <!-- ━━━ Classifier selection ━━━ -->
     {% if has_labels %}
-    <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 mb-6">
+    <div class="bg-gray-900 border border-gray-700/50 rounded-lg p-5 mb-4">
         <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
             比較する分類器（少ないほど高速）
         </h3>
@@ -87,18 +101,18 @@
         </div>
     </div>
     {% else %}
-    <div class="bg-amber-900/20 border border-amber-700/30 rounded-lg p-4 text-amber-300 text-sm mb-6">
+    <div class="bg-amber-900/20 border border-amber-700/30 rounded-lg p-4 text-amber-300 text-sm mb-4">
         候補特許DBに 'label' 列がないため分類器比較は省略されます（検索精度のみ比較）。
     </div>
     {% endif %}
 
-    <!-- Run button -->
+    <!-- ━━━ Run button ━━━ -->
     <button id="btn-run-benchmark"
             class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors text-sm mb-6">
         ベンチマーク実行
     </button>
 
-    <!-- Results area -->
+    <!-- ━━━ Results area ━━━ -->
     <div id="benchmark-results" class="hidden space-y-6">
         <div class="flex items-center justify-between">
             <div class="text-sm text-gray-400" id="benchmark-time"></div>
@@ -109,8 +123,10 @@
             <div id="table-summary" class="overflow-x-auto rounded-lg border border-gray-700/50"></div>
         </div>
 
+        <div id="chart-heatmap-area" class="hidden bg-gray-900 border border-gray-700/50 rounded-lg p-4"></div>
         <div id="chart-precision-area" class="bg-gray-900 border border-gray-700/50 rounded-lg p-4"></div>
         <div id="chart-recall-area" class="bg-gray-900 border border-gray-700/50 rounded-lg p-4"></div>
+        <div id="chart-f1-at-k-area" class="bg-gray-900 border border-gray-700/50 rounded-lg p-4"></div>
         <div id="chart-f1-area" class="bg-gray-900 border border-gray-700/50 rounded-lg p-4"></div>
         <div id="chart-time-area" class="bg-gray-900 border border-gray-700/50 rounded-lg p-4"></div>
         <div id="chart-radar-area" class="bg-gray-900 border border-gray-700/50 rounded-lg p-4"></div>
@@ -131,18 +147,29 @@ document.addEventListener('DOMContentLoaded', function() {
     btnRun.addEventListener('click', async function() {
         var methods = Array.from(document.querySelectorAll('input[name="benchmark_methods"]:checked'))
                           .map(function(cb) { return cb.value; });
+        var strategies = Array.from(document.querySelectorAll('input[name="benchmark_strategies"]:checked'))
+                              .map(function(cb) { return cb.value; });
         var classifiers = Array.from(document.querySelectorAll('input[name="benchmark_classifiers"]:checked'))
                               .map(function(cb) { return cb.value; });
 
-        if (methods.length < 2) {
-            showFlash('2つ以上の手法を選択してください。', 'warning');
+        if (methods.length < 1) {
+            showFlash('ベクトル化手法を1つ以上選択してください。', 'warning');
+            return;
+        }
+        if (strategies.length < 1) {
+            showFlash('集約戦略を1つ以上選択してください。', 'warning');
+            return;
+        }
+        var combos = methods.length * strategies.length;
+        if (combos < 2) {
+            showFlash('比較のため、手法×戦略の組み合わせが2つ以上になるよう選択してください。', 'warning');
             return;
         }
 
         var result = await ajaxPost('/benchmark/run', {
             methods: methods,
+            strategies: strategies,
             classifiers: classifiers.length > 0 ? classifiers : null,
-            strategy: document.getElementById('bm-strategy').value,
             test_ratio: parseFloat(document.getElementById('bm-test-ratio').value),
             cv_folds: parseInt(document.getElementById('bm-cv-folds').value),
         }, { loadingMessage: 'ベンチマーク実行中（数分かかる場合があります）...' });
@@ -162,8 +189,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Charts
         var chartMap = {
+            'heatmap': 'chart-heatmap-area',
             'precision': 'chart-precision-area',
             'recall': 'chart-recall-area',
+            'f1_at_k': 'chart-f1-at-k-area',
             'f1': 'chart-f1-area',
             'time': 'chart-time-area',
             'radar': 'chart-radar-area',
@@ -194,6 +223,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         showFlash('ベンチマーク完了 (' + result.total_time + '秒)', 'success');
+
+        // Scroll to results
+        area.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 
     function styleTable(container) {
@@ -203,7 +235,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 h.classList.add('bg-gray-800/80', 'text-gray-400', 'text-xs', 'uppercase');
             });
             t.querySelectorAll('th').forEach(function(th) {
-                th.classList.add('px-3', 'py-2', 'text-left');
+                th.classList.add('px-3', 'py-2', 'text-left', 'whitespace-nowrap');
             });
             t.querySelectorAll('td').forEach(function(td) {
                 td.classList.add('px-3', 'py-2');
